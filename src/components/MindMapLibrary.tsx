@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Home, Trash2 } from "lucide-react";
+import { Plus, Home, Trash2, MoreVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +59,6 @@ export function MindMapLibrary() {
 
       if (error) throw error;
 
-      // Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ["mindmaps"] });
 
       toast({
@@ -97,68 +96,64 @@ export function MindMapLibrary() {
         <h2 className="text-2xl font-bold">Your Mind Maps</h2>
       </div>
       
-      <div className="relative">
-        <div className="flex overflow-x-auto pb-6 gap-4 snap-x">
-          {mindMaps?.map((mindMap) => (
-            <Card 
-              key={mindMap.id} 
-              className="min-w-[300px] snap-start hover:shadow-lg transition-shadow relative group"
-            >
-              <div 
-                className="cursor-pointer"
-                onClick={() => navigate(`/mindmap/${mindMap.id}`)}
-              >
-                <CardHeader>
-                  <CardTitle className="truncate">{mindMap.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-500">
-                    Created: {new Date(mindMap.created_at).toLocaleDateString()}
-                  </p>
-                </CardContent>
-              </div>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Mind Map</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete "{mindMap.title}"? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDelete(mindMap.id)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </Card>
-          ))}
-          
-          <Button
-            variant="outline"
-            size="icon"
-            className="min-w-[300px] h-[160px] border-dashed flex flex-col gap-2 hover:border-primary snap-start"
-            onClick={() => navigate("/new")}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {mindMaps?.map((mindMap) => (
+          <Card 
+            key={mindMap.id} 
+            className="aspect-square relative group overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 border-none shadow-lg hover:shadow-xl transition-all duration-300"
           >
-            <Plus className="h-6 w-6" />
+            <div 
+              className="absolute inset-0 cursor-pointer p-6 flex flex-col"
+              onClick={() => navigate(`/mindmap/${mindMap.id}`)}
+            >
+              <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">
+                {mindMap.title}
+              </h3>
+              <p className="text-sm text-white/70">
+                {new Date(mindMap.created_at).toLocaleDateString()}
+              </p>
+            </div>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:bg-white/10"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Mind Map</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{mindMap.title}"? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(mindMap.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Card>
+        ))}
+        
+        <Card
+          className="aspect-square border-dashed hover:border-primary cursor-pointer flex items-center justify-center bg-background/50 hover:bg-background/80 transition-colors"
+          onClick={() => navigate("/new")}
+        >
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Plus className="h-8 w-8" />
             <span className="text-sm">Create New Mind Map</span>
-          </Button>
-        </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
