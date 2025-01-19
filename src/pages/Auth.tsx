@@ -32,25 +32,26 @@ export default function Auth() {
       }
     });
 
-    // Set up error handling for auth state
-    const handleError = (error: AuthError) => {
-      let message = "An error occurred during authentication.";
-      if (error.message.includes("Invalid login credentials")) {
-        message = "Invalid email or password. Please check your credentials.";
+    // Handle auth errors through the auth state change event
+    const handleAuthError = async () => {
+      const { error } = await supabase.auth.getSession();
+      if (error) {
+        let message = "An error occurred during authentication.";
+        if (error.message.includes("Invalid login credentials")) {
+          message = "Invalid email or password. Please check your credentials.";
+        }
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: message,
+        });
       }
-      toast({
-        variant: "destructive",
-        title: "Authentication Error",
-        description: message,
-      });
     };
 
-    // Handle auth errors through the error listener
-    const authErrorSubscription = supabase.auth.onError(handleError);
+    handleAuthError();
 
     return () => {
       subscription.unsubscribe();
-      authErrorSubscription.data.subscription.unsubscribe();
     };
   }, [navigate, toast]);
 
