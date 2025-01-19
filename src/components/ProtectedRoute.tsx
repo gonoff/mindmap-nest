@@ -14,52 +14,43 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
     const checkAuth = async () => {
       try {
-        // First check the session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          if (mounted) {
-            setIsAuthenticated(false);
-            toast({
-              title: "Session Error",
-              description: "Please sign in again.",
-              variant: "destructive",
-            });
-          }
-          return;
-        }
-
         if (!session) {
           if (mounted) {
             setIsAuthenticated(false);
+            setIsLoading(false);
           }
           return;
         }
 
-        // If we have a session, verify the user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        // Verify the session is still valid
+        const { data: { user }, error } = await supabase.auth.getUser();
         
-        if (userError) {
-          console.error("User fetch error:", userError);
+        if (error) {
+          console.error("Auth error:", error);
           if (mounted) {
             setIsAuthenticated(false);
             toast({
-              title: "Authentication Error",
-              description: "Your session has expired. Please sign in again.",
+              title: "Session Expired",
+              description: "Please sign in again to continue.",
               variant: "destructive",
             });
           }
-          return;
-        }
-
-        if (mounted) {
-          setIsAuthenticated(!!user);
+        } else {
+          if (mounted) {
+            setIsAuthenticated(!!user);
+          }
         }
       } catch (error) {
         console.error("Auth check error:", error);
         if (mounted) {
           setIsAuthenticated(false);
+          toast({
+            title: "Authentication Error",
+            description: "Please try signing in again.",
+            variant: "destructive",
+          });
         }
       } finally {
         if (mounted) {
@@ -68,20 +59,20 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Initial auth check
     checkAuth();
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session);
-      
       if (!mounted) return;
 
+      console.log("Auth state changed:", event);
+      
       if (event === 'SIGNED_IN') {
         setIsAuthenticated(true);
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
       } else if (event === 'TOKEN_REFRESHED') {
-        // Recheck the session when token is refreshed
-        const { data: { session } } = await supabase.auth.getSession();
         setIsAuthenticated(!!session);
       }
       setIsLoading(false);
