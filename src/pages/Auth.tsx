@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Auth as SupabaseAuth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Auth() {
@@ -67,14 +67,7 @@ export default function Auth() {
           },
         }}
         providers={[]}
-        redirectTo={window.location.origin + "/library"}
-        onError={(error) => {
-          toast({
-            variant: "destructive",
-            title: "Authentication Error",
-            description: error.message,
-          });
-        }}
+        redirectTo={`${window.location.origin}/library`}
       />
     </div>
   );
