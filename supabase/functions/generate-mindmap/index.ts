@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Helper function to calculate node positions in a radial layout
 function calculateNodePosition(level: number, index: number, totalNodesInLevel: number, parentX = 0, parentY = 0) {
-  const LEVEL_RADIUS = 250; // Increased spacing between levels
+  const LEVEL_RADIUS = 250;
   const angle = (2 * Math.PI * index) / totalNodesInLevel - Math.PI / 2;
   
   return {
@@ -38,38 +38,36 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a mind map generator that creates well-organized, hierarchical mind maps from text. Follow these guidelines:
-
-1. Create a clear hierarchical structure with no more than 3-4 levels deep
-2. The main topic should be the central node (level 0)
-3. Create 4-6 primary branches for major themes (level 1)
-4. Add secondary nodes (level 2) only for important subtopics
-5. Limit the number of nodes per level:
-   - Level 1: 4-6 nodes
-   - Level 2: 3-4 nodes per parent
-   - Level 3: 2-3 nodes per parent if needed
-6. Keep node labels concise (max 30 characters)
-7. Ensure even distribution of nodes around their parent
-8. Preserve key information while maintaining clarity
-
-Return ONLY a JSON object with this structure:
+            content: `You are a mind map generator that creates hierarchical mind maps from text. Output ONLY valid JSON with this exact structure:
 {
   "nodes": [
-    { 
+    {
       "id": "string",
-      "label": "string",
-      "level": number, // 0 for center, 1 for main branches, etc.
-      "parentId": "string" // optional, for positioning
+      "label": "string (30 chars max)",
+      "level": number (0 for center, 1-3 for branches)
     }
   ],
   "edges": [
-    { "id": "string", "source": "string", "target": "string" }
+    {
+      "id": "string",
+      "source": "string (node id)",
+      "target": "string (node id)"
+    }
   ]
-}`
+}
+
+Follow these rules:
+1. Central node is level 0
+2. 4-6 main branches (level 1)
+3. 2-4 sub-branches per main branch (level 2)
+4. Optional level 3 nodes (1-2 per level 2 node)
+5. Keep labels under 30 characters
+6. Ensure all edges connect existing nodes
+7. Use descriptive but concise labels`
           },
           {
             role: 'user',
@@ -88,7 +86,7 @@ Return ONLY a JSON object with this structure:
     }
 
     const aiResult = await openAIResponse.json()
-    console.log('OpenAI response:', aiResult)
+    console.log('OpenAI response:', JSON.stringify(aiResult))
 
     if (!aiResult.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI')
@@ -96,37 +94,54 @@ Return ONLY a JSON object with this structure:
 
     let rawMindMap
     try {
-      rawMindMap = JSON.parse(aiResult.choices[0].message.content)
+      rawMindMap = JSON.parse(aiResult.choices[0].message.content.trim())
+      
+      // Validate the structure
+      if (!Array.isArray(rawMindMap.nodes) || !Array.isArray(rawMindMap.edges)) {
+        throw new Error('Invalid mind map structure: missing nodes or edges arrays')
+      }
+
+      // Validate each node
+      rawMindMap.nodes.forEach((node: any, index: number) => {
+        if (!node.id || !node.label || typeof node.level !== 'number') {
+          throw new Error(`Invalid node at index ${index}: ${JSON.stringify(node)}`)
+        }
+      })
+
+      // Validate each edge
+      rawMindMap.edges.forEach((edge: any, index: number) => {
+        if (!edge.id || !edge.source || !edge.target) {
+          throw new Error(`Invalid edge at index ${index}: ${JSON.stringify(edge)}`)
+        }
+      })
+
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', aiResult.choices[0].message.content)
-      throw new Error('Failed to parse mind map structure from OpenAI response')
+      throw new Error(`Failed to parse mind map structure: ${parseError.message}`)
     }
 
     // Process the nodes to add positions
     const processedNodes = rawMindMap.nodes.map(node => {
-      // Group nodes by level
-      const nodesInSameLevel = rawMindMap.nodes.filter(n => n.level === node.level);
-      const levelIndex = nodesInSameLevel.findIndex(n => n.id === node.id);
+      const nodesInSameLevel = rawMindMap.nodes.filter(n => n.level === node.level)
+      const levelIndex = nodesInSameLevel.findIndex(n => n.id === node.id)
       
-      // Find parent node if it exists
-      const parentNode = node.parentId 
-        ? rawMindMap.nodes.find(n => n.id === node.parentId)
-        : null;
+      const parentEdge = rawMindMap.edges.find(e => e.target === node.id)
+      const parentNode = parentEdge 
+        ? rawMindMap.nodes.find(n => n.id === parentEdge.source)
+        : null
       
-      // Calculate position based on level and parent
       const position = calculateNodePosition(
         node.level,
         levelIndex,
         nodesInSameLevel.length,
         parentNode?.position?.x,
         parentNode?.position?.y
-      );
+      )
 
       return {
         id: node.id,
         label: node.label,
         position,
-        // Add styling based on level
         style: {
           background: node.level === 0 ? 'hsl(var(--primary))' : 'hsl(var(--background))',
           color: node.level === 0 ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
@@ -138,8 +153,8 @@ Return ONLY a JSON object with this structure:
           width: 'auto',
           maxWidth: '200px',
         }
-      };
-    });
+      }
+    })
 
     const mindMapStructure = {
       nodes: processedNodes,
@@ -149,11 +164,14 @@ Return ONLY a JSON object with this structure:
         animated: false,
         style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
       }))
-    };
+    }
 
-    return new Response(JSON.stringify(mindMapStructure), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    console.log('Generated mind map structure:', JSON.stringify(mindMapStructure))
+
+    return new Response(
+      JSON.stringify(mindMapStructure),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
     console.error('Error generating mind map:', error)
