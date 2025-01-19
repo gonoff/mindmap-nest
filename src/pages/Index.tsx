@@ -34,7 +34,7 @@ export default function Index() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Island Header with glow effect and floating animation */}
       <div className="w-full p-4">
-        <header className="mx-auto max-w-7xl animate-floating backdrop-blur-md bg-background/60 rounded-2xl border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-shadow">
+        <header className="mx-auto max-w-7xl animate-floating backdrop-blur-md bg-background/60 rounded-[2rem] border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-shadow">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img 
@@ -57,7 +57,6 @@ export default function Index() {
         </header>
       </div>
 
-      {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section with Radial Gradient */}
         <div className="relative">
