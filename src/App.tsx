@@ -6,6 +6,7 @@ import MindMapViewer from "./pages/MindMapViewer";
 import { MindMapLibrary } from "@/components/MindMapLibrary";
 import Auth from "./pages/Auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Profile } from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MindMapLibrary />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />
