@@ -77,7 +77,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
       if (event === 'SIGNED_IN') {
         setIsAuthenticated(true);
-      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
       } else if (event === 'TOKEN_REFRESHED') {
         // Recheck the session when token is refreshed
