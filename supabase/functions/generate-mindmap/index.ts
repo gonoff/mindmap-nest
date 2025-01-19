@@ -9,11 +9,13 @@ const corsHeaders = {
 interface MindMapNode {
   id: string;
   label: string;
+  position: { x: number; y: number };
 }
 
 interface MindMapEdge {
-  from: string;
-  to: string;
+  id: string;
+  source: string;
+  target: string;
 }
 
 interface MindMapStructure {
@@ -44,14 +46,16 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
             content: `You are a mind map generator. Given a text input, analyze it and create a mind map structure with nodes and edges. 
             The output should be a valid JSON object with "nodes" and "edges" arrays. 
-            Each node should have an "id" and "label". Each edge should have "from" and "to" properties referencing node IDs.
-            Keep it concise with maximum 10 nodes for clarity.`
+            Each node should have an "id", "label", and "position" (x,y coordinates). 
+            Each edge should have "id", "source", and "target" properties referencing node IDs.
+            Keep it concise with maximum 10 nodes for clarity.
+            Position nodes in a visually appealing way, with the main topic at (0,0) and related topics around it.`
           },
           {
             role: 'user',
@@ -74,13 +78,13 @@ serve(async (req) => {
       // Fallback for invalid or extremely short content
       const fallbackStructure: MindMapStructure = {
         nodes: [
-          { id: 'main', label: content.length > 50 ? content.substring(0, 50) + '...' : content },
-          { id: 'sub1', label: 'Key Point 1' },
-          { id: 'sub2', label: 'Key Point 2' }
+          { id: 'main', label: content.substring(0, 50), position: { x: 0, y: 0 } },
+          { id: 'sub1', label: 'Key Point 1', position: { x: -200, y: 100 } },
+          { id: 'sub2', label: 'Key Point 2', position: { x: 200, y: 100 } }
         ],
         edges: [
-          { from: 'main', to: 'sub1' },
-          { from: 'main', to: 'sub2' }
+          { id: 'e1', source: 'main', target: 'sub1' },
+          { id: 'e2', source: 'main', target: 'sub2' }
         ]
       }
       

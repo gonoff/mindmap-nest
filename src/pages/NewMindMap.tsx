@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Mic, Upload, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { generateMindMap } from "@/lib/mindmap";
 
 export default function NewMindMap() {
   const [content, setContent] = useState("");
@@ -36,11 +37,15 @@ export default function NewMindMap() {
         return;
       }
 
+      // Generate mind map structure from content
+      const mindMapStructure = await generateMindMap(content);
+
+      // Create mind map entry with the generated structure
       const { data, error } = await supabase
         .from("mindmaps")
         .insert({
           title: content.split('\n')[0].slice(0, 50) || "New Mind Map",
-          content: { text: content },
+          content: mindMapStructure,
           user_id: user.id
         })
         .select()
@@ -53,9 +58,9 @@ export default function NewMindMap() {
         description: "Mind map created successfully",
       });
 
-      // Redirect to the mind map viewer (we'll implement this route later)
       navigate(`/mindmap/${data.id}`);
     } catch (error: any) {
+      console.error('Error creating mind map:', error);
       toast({
         title: "Error creating mind map",
         description: error.message,
