@@ -14,7 +14,18 @@ export default function Auth() {
   useEffect(() => {
     // Check if user is already authenticated
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session check error:", sessionError);
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "There was an error checking your session. Please try again.",
+        });
+        return;
+      }
+
       if (session) {
         navigate("/library");
       }
@@ -23,6 +34,8 @@ export default function Auth() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth event:", event);
+      
       if (event === 'SIGNED_IN' && session) {
         navigate("/library");
       } else if (event === 'USER_UPDATED' && session) {
@@ -31,26 +44,6 @@ export default function Auth() {
         navigate("/auth");
       }
     });
-
-    // Handle auth errors through the auth state change event
-    const handleAuthError = async () => {
-      const { error } = await supabase.auth.getSession();
-      if (error) {
-        let message = "An error occurred during authentication.";
-        if (error.message.includes("Invalid login credentials")) {
-          message = "Invalid email or password. Please check your credentials.";
-        } else if (error.message.includes("User already registered")) {
-          message = "An account with this email already exists. Please sign in instead.";
-        }
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: message,
-        });
-      }
-    };
-
-    handleAuthError();
 
     return () => {
       subscription.unsubscribe();
