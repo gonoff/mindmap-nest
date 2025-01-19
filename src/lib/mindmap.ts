@@ -5,11 +5,16 @@ import * as z from "zod";
 export const MindMapNodeSchema = z.object({
   id: z.string(),
   label: z.string(),
+  position: z.object({
+    x: z.number(),
+    y: z.number(),
+  }),
 });
 
 export const MindMapEdgeSchema = z.object({
-  from: z.string(),
-  to: z.string(),
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
 });
 
 export const MindMapStructureSchema = z.object({
