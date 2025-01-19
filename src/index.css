@@ -59,7 +59,23 @@
   }
 }
 
-/* React Flow Custom Styling */
+@keyframes floating {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+// React Flow Custom Styling
 .react-flow__node {
   @apply border border-orange-500/20 bg-background shadow-lg;
   padding: 12px 20px;

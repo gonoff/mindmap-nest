@@ -32,8 +32,8 @@ export default function Index() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="w-full border-b border-border">
+      {/* Header with glow effect and floating animation */}
+      <header className="w-full border-b border-border/5 backdrop-blur-md bg-background/60 animate-floating shadow-[0_0_15px_rgba(249,115,22,0.2)] rounded-b-2xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img 
@@ -48,7 +48,7 @@ export default function Index() {
           <Button 
             onClick={handleLogin}
             variant="outline" 
-            className="border-orange-500/20 hover:bg-orange-500/10"
+            className="border-orange-500/20 hover:bg-orange-500/10 backdrop-blur-sm"
           >
             Login
           </Button>
@@ -271,3 +271,4 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode; titl
     </div>
   );
 }
+
