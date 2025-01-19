@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Edit2, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { MindMapStructure } from '@/lib/mindmap';
+import { MindMapStructure, MindMapStructureSchema } from '@/lib/mindmap';
 
 export default function MindMapViewer() {
   const { id } = useParams();
@@ -54,8 +54,10 @@ export default function MindMapViewer() {
       }
 
       setTitle(mindmap.title);
-      // Add type assertion to ensure TypeScript knows this is a MindMapStructure
-      const content = mindmap.content as MindMapStructure;
+      
+      // Parse and validate the mind map content
+      const content = MindMapStructureSchema.parse(mindmap.content);
+      
       setNodes(content.nodes.map(node => ({
         ...node,
         type: 'default',
@@ -74,16 +76,25 @@ export default function MindMapViewer() {
 
   const saveMindMap = async () => {
     try {
+      // Create and validate the mind map structure before saving
+      const mindMapContent: MindMapStructure = {
+        nodes: nodes.map(node => ({
+          id: node.id,
+          label: node.data.label,
+        })),
+        edges: edges.map(edge => ({
+          from: edge.source,
+          to: edge.target,
+        })),
+      };
+
+      // Validate the structure before saving
+      const validatedContent = MindMapStructureSchema.parse(mindMapContent);
+
       const { error } = await supabase
         .from('mindmaps')
         .update({
-          content: {
-            nodes: nodes.map(node => ({
-              id: node.id,
-              label: node.data.label,
-            })),
-            edges,
-          } as MindMapStructure,
+          content: validatedContent,
         })
         .eq('id', id);
 
