@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { CreateMindMapModal } from "./CreateMindMapModal";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface MindMap {
   id: string;
@@ -15,7 +14,7 @@ interface MindMap {
 }
 
 export function MindMapLibrary() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const { data: mindMaps, isLoading } = useQuery({
@@ -72,18 +71,13 @@ export function MindMapLibrary() {
             variant="outline"
             size="icon"
             className="min-w-[300px] h-[160px] border-dashed flex flex-col gap-2 hover:border-primary snap-start"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => navigate("/new")}
           >
             <Plus className="h-6 w-6" />
             <span className="text-sm">Create New Mind Map</span>
           </Button>
         </div>
       </div>
-
-      <CreateMindMapModal 
-        open={isCreateModalOpen} 
-        onOpenChange={setIsCreateModalOpen} 
-      />
     </div>
   );
 }
