@@ -36,20 +36,31 @@ export default function MindMapViewer() {
 
   const fetchMindMap = async () => {
     try {
+      if (!id) {
+        toast({
+          title: 'Error',
+          description: 'Mind map ID is missing',
+          variant: 'destructive',
+        });
+        navigate('/library');
+        return;
+      }
+
       const { data: mindmap, error } = await supabase
         .from('mindmaps')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
       if (!mindmap) {
         toast({
           title: 'Mind map not found',
           description: 'The requested mind map could not be found.',
           variant: 'destructive',
         });
-        navigate('/');
+        navigate('/library');
         return;
       }
 
@@ -62,6 +73,7 @@ export default function MindMapViewer() {
         ...node,
         type: 'default',
         data: { label: node.label },
+        position: node.position || { x: 0, y: 0 }, // Ensure position exists
       })));
       setEdges(content.edges);
     } catch (error) {
@@ -71,20 +83,25 @@ export default function MindMapViewer() {
         description: 'Failed to load mind map.',
         variant: 'destructive',
       });
+      navigate('/library');
     }
   };
 
   const saveMindMap = async () => {
     try {
+      if (!id) return;
+
       // Create and validate the mind map structure before saving
       const mindMapContent: MindMapStructure = {
         nodes: nodes.map(node => ({
           id: node.id,
           label: node.data.label,
+          position: node.position,
         })),
         edges: edges.map(edge => ({
-          from: edge.source,
-          to: edge.target,
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
         })),
       };
 
@@ -125,7 +142,7 @@ export default function MindMapViewer() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/library')}
           className="h-8 w-8"
         >
           <ArrowLeft className="h-4 w-4" />
