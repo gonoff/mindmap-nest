@@ -6,8 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to calculate node positions in a radial layout
+function calculateNodePosition(level: number, index: number, totalNodesInLevel: number, parentX = 0, parentY = 0) {
+  const LEVEL_RADIUS = 250; // Increased spacing between levels
+  const angle = (2 * Math.PI * index) / totalNodesInLevel - Math.PI / 2;
+  
+  return {
+    x: parentX + LEVEL_RADIUS * level * Math.cos(angle),
+    y: parentY + LEVEL_RADIUS * level * Math.sin(angle)
+  };
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -28,40 +38,46 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: `You are a mind map generator that creates comprehensive and detailed mind maps from text. Follow these guidelines:
+            content: `You are a mind map generator that creates well-organized, hierarchical mind maps from text. Follow these guidelines:
 
-1. Create a hierarchical structure that preserves ALL important information from the source text
-2. The main topic should be the central node
-3. Create primary branches for major themes or sections
-4. Include secondary and tertiary nodes to capture details and supporting information
-5. Preserve specific examples, data points, and key details from the source
-6. Ensure relationships between concepts are properly represented through the node hierarchy
-7. Use clear, concise labels that maintain the original meaning
-8. Don't summarize or omit information - find ways to organize it all meaningfully
+1. Create a clear hierarchical structure with no more than 3-4 levels deep
+2. The main topic should be the central node (level 0)
+3. Create 4-6 primary branches for major themes (level 1)
+4. Add secondary nodes (level 2) only for important subtopics
+5. Limit the number of nodes per level:
+   - Level 1: 4-6 nodes
+   - Level 2: 3-4 nodes per parent
+   - Level 3: 2-3 nodes per parent if needed
+6. Keep node labels concise (max 30 characters)
+7. Ensure even distribution of nodes around their parent
+8. Preserve key information while maintaining clarity
 
-Return ONLY a JSON object with this structure (no markdown):
+Return ONLY a JSON object with this structure:
 {
   "nodes": [
-    { "id": "string", "label": "string", "position": { "x": number, "y": number } }
+    { 
+      "id": "string",
+      "label": "string",
+      "level": number, // 0 for center, 1 for main branches, etc.
+      "parentId": "string" // optional, for positioning
+    }
   ],
   "edges": [
     { "id": "string", "source": "string", "target": "string" }
   ]
-}
-
-Position nodes in a radial layout starting from (0,0) for the central node, with child nodes positioned around their parents in a way that prevents overlap.`
+}`
           },
           {
             role: 'user',
             content
           }
         ],
-        temperature: 0.3, // Lower temperature for more consistent and precise output
-        max_tokens: 4000, // Increased token limit to handle more detailed responses
+        temperature: 0.3,
+        max_tokens: 4000,
       }),
     })
 
@@ -78,20 +94,62 @@ Position nodes in a radial layout starting from (0,0) for the central node, with
       throw new Error('Invalid response from OpenAI')
     }
 
-    let mindMapStructure
+    let rawMindMap
     try {
-      mindMapStructure = JSON.parse(aiResult.choices[0].message.content)
+      rawMindMap = JSON.parse(aiResult.choices[0].message.content)
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', aiResult.choices[0].message.content)
       throw new Error('Failed to parse mind map structure from OpenAI response')
     }
 
-    // Validate the structure
-    if (!mindMapStructure.nodes || !mindMapStructure.edges || 
-        !Array.isArray(mindMapStructure.nodes) || !Array.isArray(mindMapStructure.edges)) {
-      console.error('Invalid mind map structure:', mindMapStructure)
-      throw new Error('Invalid mind map structure received from OpenAI')
-    }
+    // Process the nodes to add positions
+    const processedNodes = rawMindMap.nodes.map(node => {
+      // Group nodes by level
+      const nodesInSameLevel = rawMindMap.nodes.filter(n => n.level === node.level);
+      const levelIndex = nodesInSameLevel.findIndex(n => n.id === node.id);
+      
+      // Find parent node if it exists
+      const parentNode = node.parentId 
+        ? rawMindMap.nodes.find(n => n.id === node.parentId)
+        : null;
+      
+      // Calculate position based on level and parent
+      const position = calculateNodePosition(
+        node.level,
+        levelIndex,
+        nodesInSameLevel.length,
+        parentNode?.position?.x,
+        parentNode?.position?.y
+      );
+
+      return {
+        id: node.id,
+        label: node.label,
+        position,
+        // Add styling based on level
+        style: {
+          background: node.level === 0 ? 'hsl(var(--primary))' : 'hsl(var(--background))',
+          color: node.level === 0 ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
+          border: '1px solid hsl(var(--primary))',
+          borderRadius: '8px',
+          padding: '12px 20px',
+          fontSize: node.level === 0 ? '16px' : '14px',
+          fontWeight: node.level <= 1 ? 'bold' : 'normal',
+          width: 'auto',
+          maxWidth: '200px',
+        }
+      };
+    });
+
+    const mindMapStructure = {
+      nodes: processedNodes,
+      edges: rawMindMap.edges.map(edge => ({
+        ...edge,
+        type: 'smoothstep',
+        animated: false,
+        style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
+      }))
+    };
 
     return new Response(JSON.stringify(mindMapStructure), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

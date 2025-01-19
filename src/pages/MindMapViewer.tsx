@@ -157,7 +157,15 @@ export default function MindMapViewer() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         fitView
+        fitViewOptions={{
+          padding: 0.5,
+          minZoom: 0.5,
+          maxZoom: 1.5
+        }}
+        minZoom={0.2}
+        maxZoom={2}
         className="bg-background"
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
       >
         <Panel position="top-right" className="flex gap-2">
           {isEditing ? (
@@ -173,7 +181,12 @@ export default function MindMapViewer() {
           )}
         </Panel>
         <Controls />
-        <MiniMap />
+        <MiniMap 
+          nodeColor={(node) => {
+            return node.style?.background || 'hsl(var(--primary))';
+          }}
+          maskColor="hsl(var(--background))"
+        />
         <Background />
       </ReactFlow>
     </div>
