@@ -182,8 +182,8 @@ export default function MindMapViewer() {
         </Panel>
         <Controls />
         <MiniMap 
-          nodeColor={(node) => {
-            return node.style?.background || 'hsl(var(--primary))';
+          nodeColor={(node: Node) => {
+            return (node.style?.background as string) || 'hsl(var(--primary))';
           }}
           maskColor="hsl(var(--background))"
         />
