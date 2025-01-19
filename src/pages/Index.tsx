@@ -112,14 +112,14 @@ export default function Index() {
         </div>
 
         {/* How It Works Section */}
-        <section className="py-20 bg-orange-500/5">
+        <section className="py-20 bg-orange-500/5 relative overflow-hidden">
           <div className="container mx-auto px-4">
-            <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-orange-500 to-orange-300 text-transparent bg-clip-text">
+            <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-orange-500 to-orange-300 text-transparent bg-clip-text animate-fade-in">
               How It Works
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <div className="text-center space-y-4 animate-fade-in [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards]">
+                <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center animate-floating">
                   <Code className="w-8 h-8 text-orange-500" />
                 </div>
                 <h3 className="text-xl font-semibold">1. Input Your Text</h3>
@@ -127,8 +127,8 @@ export default function Index() {
                   Simply paste your text content - articles, notes, or documents into Instant Map.
                 </p>
               </div>
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <div className="text-center space-y-4 animate-fade-in [animation-delay:400ms] opacity-0 [animation-fill-mode:forwards]">
+                <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center animate-floating [animation-delay:200ms]">
                   <Sparkles className="w-8 h-8 text-orange-500" />
                 </div>
                 <h3 className="text-xl font-semibold">2. AI Processing</h3>
@@ -136,8 +136,8 @@ export default function Index() {
                   Our AI analyzes your content and automatically structures it into a coherent mind map.
                 </p>
               </div>
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <div className="text-center space-y-4 animate-fade-in [animation-delay:600ms] opacity-0 [animation-fill-mode:forwards]">
+                <div className="mx-auto w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center animate-floating [animation-delay:400ms]">
                   <Share2 className="w-8 h-8 text-orange-500" />
                 </div>
                 <h3 className="text-xl font-semibold">3. Export & Share</h3>
@@ -147,6 +147,10 @@ export default function Index() {
               </div>
             </div>
           </div>
+          
+          {/* Decorative background elements */}
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-orange-500/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-orange-500/5 rounded-full blur-3xl animate-pulse [animation-delay:1000ms]" />
         </section>
 
         {/* Benefits Section */}
@@ -272,3 +276,4 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode; titl
     </div>
   );
 }
+
