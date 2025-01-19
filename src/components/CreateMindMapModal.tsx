@@ -28,11 +28,27 @@ export function CreateMindMapModal({ open, onOpenChange }: CreateMindMapModalPro
       return;
     }
 
+    // Get the current user's ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to create a mind map",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase
         .from("mindmaps")
-        .insert([{ title, content: {} }]);
+        .insert({
+          title,
+          content: {},
+          user_id: user.id
+        });
 
       if (error) throw error;
 
