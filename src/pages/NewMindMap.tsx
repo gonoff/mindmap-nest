@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Upload } from "lucide-react";
+import { Mic, Upload, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function NewMindMap() {
@@ -141,7 +141,17 @@ export default function NewMindMap() {
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Create New Mind Map</h1>
+      <div className="mb-6 flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/")}
+          className="h-8 w-8"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-2xl font-bold">Create New Mind Map</h1>
+      </div>
       
       <div className="space-y-6">
         <div>
