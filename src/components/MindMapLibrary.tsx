@@ -1,10 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Home } from "lucide-react";
+import { Plus, Home, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface MindMap {
   id: string;
@@ -16,6 +27,7 @@ interface MindMap {
 export function MindMapLibrary() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: mindMaps, isLoading } = useQuery({
     queryKey: ["mindmaps"],
@@ -37,6 +49,31 @@ export function MindMapLibrary() {
       return data as MindMap[];
     },
   });
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("mindmaps")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Invalidate and refetch
+      await queryClient.invalidateQueries({ queryKey: ["mindmaps"] });
+
+      toast({
+        title: "Mind map deleted",
+        description: "The mind map has been successfully deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error deleting mind map",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -65,17 +102,50 @@ export function MindMapLibrary() {
           {mindMaps?.map((mindMap) => (
             <Card 
               key={mindMap.id} 
-              className="min-w-[300px] snap-start hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/mindmap/${mindMap.id}`)}
+              className="min-w-[300px] snap-start hover:shadow-lg transition-shadow relative group"
             >
-              <CardHeader>
-                <CardTitle className="truncate">{mindMap.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500">
-                  Created: {new Date(mindMap.created_at).toLocaleDateString()}
-                </p>
-              </CardContent>
+              <div 
+                className="cursor-pointer"
+                onClick={() => navigate(`/mindmap/${mindMap.id}`)}
+              >
+                <CardHeader>
+                  <CardTitle className="truncate">{mindMap.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-500">
+                    Created: {new Date(mindMap.created_at).toLocaleDateString()}
+                  </p>
+                </CardContent>
+              </div>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Mind Map</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{mindMap.title}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDelete(mindMap.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </Card>
           ))}
           
