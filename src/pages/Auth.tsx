@@ -39,6 +39,8 @@ export default function Auth() {
         let message = "An error occurred during authentication.";
         if (error.message.includes("Invalid login credentials")) {
           message = "Invalid email or password. Please check your credentials.";
+        } else if (error.message.includes("User already registered")) {
+          message = "An account with this email already exists. Please sign in instead.";
         }
         toast({
           variant: "destructive",
