@@ -5,6 +5,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AuthError } from "@supabase/supabase-js";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -21,23 +22,36 @@ export default function Auth() {
     checkAuth();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         navigate("/library");
       } else if (event === 'USER_UPDATED' && session) {
         navigate("/library");
       } else if (event === 'SIGNED_OUT') {
         navigate("/auth");
-      } else if (event === 'AUTH_ERROR') {
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "Please check your credentials and try again.",
-        });
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Set up error handling for auth state
+    const handleError = (error: AuthError) => {
+      let message = "An error occurred during authentication.";
+      if (error.message.includes("Invalid login credentials")) {
+        message = "Invalid email or password. Please check your credentials.";
+      }
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: message,
+      });
+    };
+
+    // Handle auth errors through the error listener
+    const authErrorSubscription = supabase.auth.onError(handleError);
+
+    return () => {
+      subscription.unsubscribe();
+      authErrorSubscription.data.subscription.unsubscribe();
+    };
   }, [navigate, toast]);
 
   return (
