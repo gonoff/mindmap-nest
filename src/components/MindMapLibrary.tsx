@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -47,15 +47,27 @@ export function MindMapLibrary() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-transparent"
+          onClick={() => navigate("/")}
+        >
+          <Home className="h-8 w-8 text-[#F97316]" />
+        </Button>
         <h2 className="text-2xl font-bold">Your Mind Maps</h2>
       </div>
       
       <div className="relative">
         <div className="flex overflow-x-auto pb-6 gap-4 snap-x">
           {mindMaps?.map((mindMap) => (
-            <Card key={mindMap.id} className="min-w-[300px] snap-start hover:shadow-lg transition-shadow">
+            <Card 
+              key={mindMap.id} 
+              className="min-w-[300px] snap-start hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/mindmap/${mindMap.id}`)}
+            >
               <CardHeader>
                 <CardTitle className="truncate">{mindMap.title}</CardTitle>
               </CardHeader>
