@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
-import { Brain } from "lucide-react";
+import { Brain, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateMindMap } from "@/lib/mindmap";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,12 +30,14 @@ export default function ProcessingMindMap() {
           return;
         }
 
-        // Simulate initial processing
-        setProgress(25);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Initial delay and progress
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setProgress(20);
 
-        // Get the current user's ID
+        // Get the current user's ID with delay
         const { data: { user }, error: userError } = await supabase.auth.getUser();
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        setProgress(35);
         
         if (userError || !user) {
           console.error("User error:", userError);
@@ -48,16 +50,14 @@ export default function ProcessingMindMap() {
           return;
         }
 
-        // Update progress before generation
+        // Processing delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
         setProgress(50);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
         // Generate mind map structure from content
         const mindMapStructure = await generateMindMap(content);
-
-        // Update progress after generation
+        await new Promise(resolve => setTimeout(resolve, 1200));
         setProgress(75);
-        await new Promise(resolve => setTimeout(resolve, 800));
 
         // Create mind map entry with the generated structure
         const { data, error } = await supabase
@@ -72,9 +72,10 @@ export default function ProcessingMindMap() {
 
         if (error) throw error;
 
-        // Final progress update
+        // Final progress and delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setProgress(100);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         toast({
           title: "Success",
@@ -97,33 +98,38 @@ export default function ProcessingMindMap() {
   }, [content, navigate, toast, title]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-orange-50 to-white">
-      <div className="w-full max-w-md space-y-8 text-center">
-        <div className="flex justify-center">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-md space-y-8">
+        <div className="relative flex flex-col items-center justify-center space-y-6">
           <div className="relative">
-            <Brain className="w-20 h-20 text-orange-500 animate-pulse" />
-            <div className="absolute inset-0 bg-orange-500/20 rounded-full blur-xl animate-pulse" />
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+            <div className="relative bg-background rounded-full p-6 border border-border shadow-lg">
+              {progress < 100 ? (
+                <Loader className="w-12 h-12 text-primary animate-spin" />
+              ) : (
+                <Brain className="w-12 h-12 text-primary" />
+              )}
+            </div>
           </div>
-        </div>
-        
-        <h1 className="text-2xl font-bold text-gray-900">
-          Generating Your Mind Map
-        </h1>
-        
-        <p className="text-gray-600">
-          Our AI is analyzing your content and creating a beautiful mind map visualization.
-          This may take a few moments...
-        </p>
-        
-        <div className="space-y-2">
-          <Progress value={progress} className="h-2" />
-          <p className="text-sm text-gray-500">
-            {progress < 25 && "Initializing..."}
-            {progress >= 25 && progress < 50 && "Processing content..."}
+          
+          <h1 className="text-2xl font-bold text-foreground text-center">
+            {progress === 100 ? "Mind Map Ready!" : "Generating Your Mind Map"}
+          </h1>
+          
+          <p className="text-muted-foreground text-center max-w-sm">
+            {progress < 35 && "Analyzing your content..."}
+            {progress >= 35 && progress < 50 && "Processing structure..."}
             {progress >= 50 && progress < 75 && "Generating mind map..."}
             {progress >= 75 && progress < 100 && "Finalizing..."}
-            {progress === 100 && "Complete!"}
+            {progress === 100 && "Redirecting you to your new mind map..."}
           </p>
+          
+          <div className="w-full space-y-2">
+            <Progress value={progress} className="h-2" />
+            <p className="text-sm text-muted-foreground text-center">
+              {progress}% Complete
+            </p>
+          </div>
         </div>
       </div>
     </div>
