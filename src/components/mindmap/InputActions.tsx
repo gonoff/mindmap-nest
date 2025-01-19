@@ -29,9 +29,14 @@ export function InputActions({ onTextSubmit, isLoading, content }: InputActionsP
         return;
       }
 
+      toast({
+        title: "Processing PDF",
+        description: "Please wait while we process your PDF...",
+      });
+
       // Upload to storage bucket
       const fileName = `${crypto.randomUUID()}.pdf`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('exports')
         .upload(fileName, file);
 
@@ -42,15 +47,24 @@ export function InputActions({ onTextSubmit, isLoading, content }: InputActionsP
         .from('exports')
         .getPublicUrl(fileName);
 
+      // Process PDF using edge function
+      const { data: processedData, error: processError } = await supabase.functions
+        .invoke('process-pdf', {
+          body: { pdfUrl: publicUrl }
+        });
+
+      if (processError) throw processError;
+
       navigate("/processing", {
         state: {
-          content: `PDF URL: ${publicUrl}`,
+          content: processedData.content,
           title: file.name.replace('.pdf', '')
         }
       });
     } catch (error: any) {
+      console.error('Error processing PDF:', error);
       toast({
-        title: "Error uploading PDF",
+        title: "Error processing PDF",
         description: error.message,
         variant: "destructive",
       });
