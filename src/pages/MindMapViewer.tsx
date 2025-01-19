@@ -54,8 +54,8 @@ export default function MindMapViewer() {
       }
 
       setTitle(mindmap.title);
-      // Add type assertion here since we know the structure
-      const content = mindmap.content as MindMapStructure;
+      // The content is already of type MindMapStructure due to our updated types
+      const content = mindmap.content;
       setNodes(content.nodes.map(node => ({
         ...node,
         type: 'default',
@@ -83,7 +83,7 @@ export default function MindMapViewer() {
               label: node.data.label,
             })),
             edges,
-          } as MindMapStructure,
+          },
         })
         .eq('id', id);
 
