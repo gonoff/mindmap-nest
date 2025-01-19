@@ -4,6 +4,7 @@ import { Auth as SupabaseAuth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -23,6 +24,10 @@ export default function Auth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         navigate("/library");
+      } else if (event === "USER_UPDATED" && session) {
+        navigate("/library");
+      } else if (event === "SIGNED_OUT") {
+        navigate("/auth");
       }
     });
 
@@ -44,8 +49,32 @@ export default function Auth() {
               },
             },
           },
+          style: {
+            button: {
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              padding: '8px 12px',
+            },
+            input: {
+              borderRadius: '6px',
+              fontSize: '14px',
+              padding: '8px 12px',
+            },
+            anchor: {
+              color: '#F97316',
+            },
+          },
         }}
         providers={[]}
+        redirectTo={window.location.origin + "/library"}
+        onError={(error) => {
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: error.message,
+          });
+        }}
       />
     </div>
   );
