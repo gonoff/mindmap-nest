@@ -2,14 +2,17 @@ import { Button } from "@/components/ui/button";
 import { Mic, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface InputActionsProps {
   onTextSubmit: () => Promise<void>;
   isLoading: boolean;
+  content: string;
 }
 
-export function InputActions({ onTextSubmit, isLoading }: InputActionsProps) {
+export function InputActions({ onTextSubmit, isLoading, content }: InputActionsProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -39,23 +42,11 @@ export function InputActions({ onTextSubmit, isLoading }: InputActionsProps) {
         .from('exports')
         .getPublicUrl(fileName);
 
-      // Create mind map entry
-      const { error } = await supabase
-        .from("mindmaps")
-        .insert({
-          title: file.name.replace('.pdf', ''),
-          content: { 
-            type: 'pdf',
-            url: publicUrl
-          },
-          user_id: user.id
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "PDF uploaded successfully",
+      navigate("/processing", {
+        state: {
+          content: `PDF URL: ${publicUrl}`,
+          title: file.name.replace('.pdf', '')
+        }
       });
     } catch (error: any) {
       toast({
@@ -64,6 +55,15 @@ export function InputActions({ onTextSubmit, isLoading }: InputActionsProps) {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCreateMindMap = () => {
+    navigate("/processing", {
+      state: {
+        content,
+        title: content.split('\n')[0].slice(0, 50) || "New Mind Map"
+      }
+    });
   };
 
   const handleAudioTranscription = () => {
@@ -76,7 +76,7 @@ export function InputActions({ onTextSubmit, isLoading }: InputActionsProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <Button
-        onClick={onTextSubmit}
+        onClick={handleCreateMindMap}
         disabled={isLoading}
         className="flex-1"
       >
