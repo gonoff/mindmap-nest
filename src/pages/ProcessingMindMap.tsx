@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { Brain } from "lucide-react";
@@ -10,11 +10,16 @@ export default function ProcessingMindMap() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const [progress, setProgress] = useState(0);
   const { content, title } = location.state as { content: string; title: string };
 
   useEffect(() => {
     const processContent = async () => {
       try {
+        // Simulate initial processing
+        setProgress(25);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         // Get the current user's ID
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -28,8 +33,16 @@ export default function ProcessingMindMap() {
           return;
         }
 
+        // Update progress before generation
+        setProgress(50);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         // Generate mind map structure from content
         const mindMapStructure = await generateMindMap(content);
+
+        // Update progress after generation
+        setProgress(75);
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         // Create mind map entry with the generated structure
         const { data, error } = await supabase
@@ -43,6 +56,10 @@ export default function ProcessingMindMap() {
           .single();
 
         if (error) throw error;
+
+        // Final progress update
+        setProgress(100);
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         toast({
           title: "Success",
@@ -84,8 +101,14 @@ export default function ProcessingMindMap() {
         </p>
         
         <div className="space-y-2">
-          <Progress value={75} className="h-2" />
-          <p className="text-sm text-gray-500">Processing content...</p>
+          <Progress value={progress} className="h-2" />
+          <p className="text-sm text-gray-500">
+            {progress < 25 && "Initializing..."}
+            {progress >= 25 && progress < 50 && "Processing content..."}
+            {progress >= 50 && progress < 75 && "Generating mind map..."}
+            {progress >= 75 && progress < 100 && "Finalizing..."}
+            {progress === 100 && "Complete!"}
+          </p>
         </div>
       </div>
     </div>
