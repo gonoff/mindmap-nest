@@ -28,28 +28,28 @@ export function MindMapCard({ id, title, created_at, onDelete }: MindMapCardProp
   const formattedDate = format(new Date(created_at), "MMM d, yyyy 'at' h:mm a");
 
   return (
-    <Card className="aspect-square relative group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300">
+    <Card className="aspect-square relative group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 animate-floating hover:scale-[1.02] hover:-translate-y-1">
       {/* Background gradient with pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-600">
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-600 transition-all duration-300 group-hover:scale-105">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_0)] bg-[size:24px_24px]" />
       </div>
       
       {/* Content overlay with glass effect */}
       <div 
-        className="absolute inset-0 cursor-pointer p-6 flex flex-col bg-gradient-to-b from-black/0 to-black/20 hover:to-black/30 transition-all duration-300"
+        className="absolute inset-0 cursor-pointer p-6 flex flex-col bg-gradient-to-b from-black/0 to-black/20 hover:to-black/30 transition-all duration-500"
         onClick={() => navigate(`/mindmap/${id}`)}
       >
-        <div className="flex-1">
+        <div className="flex-1 transform transition-transform duration-300 group-hover:translate-y-1">
           <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 drop-shadow-sm">
             {title}
           </h3>
-          <p className="text-sm text-white/70 backdrop-blur-sm inline-block px-2 py-1 rounded-full bg-black/10">
+          <p className="text-sm text-white/70 backdrop-blur-sm inline-block px-2 py-1 rounded-full bg-black/10 transform transition-all duration-300 group-hover:bg-black/20">
             Created {formattedDate}
           </p>
         </div>
         
         {/* Decorative elements */}
-        <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-tl-full transform translate-x-16 translate-y-16" />
+        <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-tl-full transform translate-x-16 translate-y-16 transition-transform duration-300 group-hover:translate-x-12 group-hover:translate-y-12" />
       </div>
 
       <AlertDialog>
