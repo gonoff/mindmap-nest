@@ -32,28 +32,30 @@ export default function Index() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header with glow effect and floating animation */}
-      <header className="w-full border-b border-border/5 backdrop-blur-md bg-background/60 animate-floating shadow-[0_0_15px_rgba(249,115,22,0.2)] rounded-b-2xl">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <img 
-              src="/lovable-uploads/dce45824-fdaf-4052-8802-3bd59f857e57.png" 
-              alt="Instant Map Logo" 
-              className="h-8 w-8"
-            />
-            <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-orange-300 text-transparent bg-clip-text">
-              Instant Map
-            </span>
+      {/* Island Header with glow effect and floating animation */}
+      <div className="w-full p-4">
+        <header className="mx-auto max-w-7xl animate-floating backdrop-blur-md bg-background/60 rounded-2xl border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)] hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-shadow">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/lovable-uploads/dce45824-fdaf-4052-8802-3bd59f857e57.png" 
+                alt="Instant Map Logo" 
+                className="h-8 w-8"
+              />
+              <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-orange-300 text-transparent bg-clip-text">
+                Instant Map
+              </span>
+            </div>
+            <Button 
+              onClick={handleLogin}
+              variant="outline" 
+              className="border-orange-500/20 hover:bg-orange-500/10 backdrop-blur-sm"
+            >
+              Login
+            </Button>
           </div>
-          <Button 
-            onClick={handleLogin}
-            variant="outline" 
-            className="border-orange-500/20 hover:bg-orange-500/10 backdrop-blur-sm"
-          >
-            Login
-          </Button>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* Main Content */}
       <main className="flex-grow">
@@ -271,4 +273,3 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode; titl
     </div>
   );
 }
-
