@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 
 interface MindMapCardProps {
   id: string;
@@ -24,6 +25,8 @@ interface MindMapCardProps {
 export function MindMapCard({ id, title, created_at, onDelete }: MindMapCardProps) {
   const navigate = useNavigate();
 
+  const formattedDate = format(new Date(created_at), "MMM d, yyyy 'at' h:mm a");
+
   return (
     <Card className="aspect-square relative group overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 border-none shadow-lg hover:shadow-xl transition-all duration-300">
       <div 
@@ -34,7 +37,7 @@ export function MindMapCard({ id, title, created_at, onDelete }: MindMapCardProp
           {title}
         </h3>
         <p className="text-sm text-white/70">
-          {new Date(created_at).toLocaleDateString()}
+          Created {formattedDate}
         </p>
       </div>
 
