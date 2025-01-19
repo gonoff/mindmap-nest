@@ -6,23 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface MindMapNode {
-  id: string;
-  label: string;
-  position: { x: number; y: number };
-}
-
-interface MindMapEdge {
-  id: string;
-  source: string;
-  target: string;
-}
-
-interface MindMapStructure {
-  nodes: MindMapNode[];
-  edges: MindMapEdge[];
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -46,20 +29,26 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Changed from gpt-4 to gpt-4o-mini
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `You are a mind map generator. Given a text input, analyze it and create a mind map structure with nodes and edges. 
-            The output should be a valid JSON object with "nodes" and "edges" arrays. 
-            Each node should have an "id", "label", and "position" (x,y coordinates). 
-            Each edge should have "id", "source", and "target" properties referencing node IDs.
+            content: `You are a mind map generator. Given a text input, analyze it and create a mind map structure.
+            Return ONLY a JSON object with this exact structure, no markdown or other formatting:
+            {
+              "nodes": [
+                { "id": "string", "label": "string", "position": { "x": number, "y": number } }
+              ],
+              "edges": [
+                { "id": "string", "source": "string", "target": "string" }
+              ]
+            }
             Keep it concise with maximum 10 nodes for clarity.
             Position nodes in a visually appealing way, with the main topic at (0,0) and related topics around it.`
           },
           {
             role: 'user',
-            content: `Generate a mind map structure for the following text: ${content}`
+            content: content
           }
         ],
         temperature: 0.7,
@@ -67,46 +56,45 @@ serve(async (req) => {
     })
 
     if (!openAIResponse.ok) {
-      throw new Error(`OpenAI API error: ${await openAIResponse.text()}`)
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
-    const aiResult = await openAIResponse.json()
-    const mindMapStructure = JSON.parse(aiResult.choices[0].message.content) as MindMapStructure
+    const aiResult = await openAIResponse.json();
+    console.log('OpenAI response:', aiResult);
+
+    if (!aiResult.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI');
+    }
+
+    let mindMapStructure;
+    try {
+      mindMapStructure = JSON.parse(aiResult.choices[0].message.content);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', aiResult.choices[0].message.content);
+      throw new Error('Failed to parse mind map structure from OpenAI response');
+    }
 
     // Validate the structure
-    if (!mindMapStructure.nodes || !mindMapStructure.edges) {
-      // Fallback for invalid or extremely short content
-      const fallbackStructure: MindMapStructure = {
-        nodes: [
-          { id: 'main', label: content.substring(0, 50), position: { x: 0, y: 0 } },
-          { id: 'sub1', label: 'Key Point 1', position: { x: -200, y: 100 } },
-          { id: 'sub2', label: 'Key Point 2', position: { x: 200, y: 100 } }
-        ],
-        edges: [
-          { id: 'e1', source: 'main', target: 'sub1' },
-          { id: 'e2', source: 'main', target: 'sub2' }
-        ]
-      }
-      
-      console.log('Using fallback structure:', fallbackStructure)
-      return new Response(JSON.stringify(fallbackStructure), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    if (!mindMapStructure.nodes || !mindMapStructure.edges || 
+        !Array.isArray(mindMapStructure.nodes) || !Array.isArray(mindMapStructure.edges)) {
+      console.error('Invalid mind map structure:', mindMapStructure);
+      throw new Error('Invalid mind map structure received from OpenAI');
     }
 
-    console.log('Generated mind map structure:', mindMapStructure)
     return new Response(JSON.stringify(mindMapStructure), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    });
 
   } catch (error) {
-    console.error('Error generating mind map:', error)
+    console.error('Error generating mind map:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    )
+    );
   }
-})
+});
