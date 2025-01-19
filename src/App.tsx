@@ -5,6 +5,7 @@ import NewMindMap from "./pages/NewMindMap";
 import MindMapViewer from "./pages/MindMapViewer";
 import { MindMapLibrary } from "@/components/MindMapLibrary";
 import Auth from "./pages/Auth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -14,10 +15,31 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/new" element={<NewMindMap />} />
-          <Route path="/mindmap/:id" element={<MindMapViewer />} />
-          <Route path="/library" element={<MindMapLibrary />} />
           <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/new"
+            element={
+              <ProtectedRoute>
+                <NewMindMap />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mindmap/:id"
+            element={
+              <ProtectedRoute>
+                <MindMapViewer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/library"
+            element={
+              <ProtectedRoute>
+                <MindMapLibrary />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </Router>
     </QueryClientProvider>
