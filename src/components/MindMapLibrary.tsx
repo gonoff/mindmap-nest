@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Home, Trash2, MoreVertical } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Plus, Home, MoreVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -84,7 +84,7 @@ export function MindMapLibrary() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center gap-4 mb-8">
         <Button
           variant="ghost"
           size="icon"
