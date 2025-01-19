@@ -12,22 +12,22 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (error) {
-          console.error("Auth error:", error);
+        if (userError) {
+          console.error("User fetch error:", userError);
+          setIsAuthenticated(false);
           toast({
             title: "Authentication Error",
             description: "Please sign in again.",
             variant: "destructive",
           });
-          setIsAuthenticated(false);
           return;
         }
 
-        setIsAuthenticated(!!session);
+        setIsAuthenticated(!!user);
       } catch (error) {
-        console.error("Session check error:", error);
+        console.error("Auth check error:", error);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -37,13 +37,15 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event);
+      console.log("Auth state changed:", event, session);
+      
       if (event === 'SIGNED_IN') {
         setIsAuthenticated(true);
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
       } else if (event === 'TOKEN_REFRESHED') {
-        setIsAuthenticated(!!session);
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsAuthenticated(!!user);
       }
       setIsLoading(false);
     });

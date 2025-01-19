@@ -16,14 +16,29 @@ export default function ProcessingMindMap() {
   useEffect(() => {
     const processContent = async () => {
       try {
+        // Check authentication first
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.error("Session error:", sessionError);
+          toast({
+            title: "Authentication Error",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+
         // Simulate initial processing
         setProgress(25);
         await new Promise(resolve => setTimeout(resolve, 800));
 
         // Get the current user's ID
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (!user) {
+        if (userError || !user) {
+          console.error("User error:", userError);
           toast({
             title: "Authentication required",
             description: "Please sign in to create a mind map",
