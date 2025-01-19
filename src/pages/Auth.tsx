@@ -22,17 +22,23 @@ export default function Auth() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      if (event === 'SIGNED_IN' && session) {
         navigate("/library");
-      } else if (event === "USER_UPDATED" && session) {
+      } else if (event === 'USER_UPDATED' && session) {
         navigate("/library");
-      } else if (event === "SIGNED_OUT") {
+      } else if (event === 'SIGNED_OUT') {
         navigate("/auth");
+      } else if (event === 'AUTH_ERROR') {
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "Please check your credentials and try again.",
+        });
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   return (
     <div className="container max-w-md mx-auto mt-12 p-4">
