@@ -48,31 +48,8 @@ export default function Auth() {
 
     checkAuth();
 
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      handleAuthStateChange(event, session);
-    });
-
-    // Set up error handler
-    const handleError = (error: AuthError) => {
-      console.error("Auth error:", error);
-      if (error.message.includes('user_already_exists')) {
-        toast({
-          title: "Account Already Exists",
-          description: "This email is already registered. Please sign in instead.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Authentication Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    };
-
-    // Handle auth errors
-    supabase.auth.onError(handleError);
+    // Set up auth state change listener with correct type signature
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
       subscription.unsubscribe();
