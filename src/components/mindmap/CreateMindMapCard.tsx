@@ -7,12 +7,12 @@ export function CreateMindMapCard() {
 
   return (
     <Card
-      className="aspect-square border-dashed hover:border-primary cursor-pointer flex items-center justify-center bg-background/50 hover:bg-background/80 transition-colors"
+      className="h-[60px] border-dashed hover:border-primary cursor-pointer flex items-center justify-center bg-background/50 hover:bg-background/80 transition-colors"
       onClick={() => navigate("/new")}
     >
-      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-        <Plus className="h-8 w-8" />
-        <span className="text-sm">Create New Mind Map</span>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Plus className="h-4 w-4" />
+        <span className="text-sm">New</span>
       </div>
     </Card>
   );
