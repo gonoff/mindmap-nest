@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Mic, Upload } from "lucide-react";
+import { Mic, MicOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useState, useRef } from "react";
 
 interface InputActionsProps {
   onTextSubmit: () => Promise<void>;
@@ -13,63 +14,9 @@ interface InputActionsProps {
 export function InputActions({ onTextSubmit, isLoading, content }: InputActionsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to upload a PDF",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Processing PDF",
-        description: "Please wait while we process your PDF...",
-      });
-
-      // Upload to storage bucket
-      const fileName = `${crypto.randomUUID()}.pdf`;
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from('exports')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('exports')
-        .getPublicUrl(fileName);
-
-      // Process PDF using edge function
-      const { data: processedData, error: processError } = await supabase.functions
-        .invoke('process-pdf', {
-          body: { pdfUrl: publicUrl }
-        });
-
-      if (processError) throw processError;
-
-      navigate("/processing", {
-        state: {
-          content: processedData.content,
-          title: file.name.replace('.pdf', '')
-        }
-      });
-    } catch (error: any) {
-      console.error('Error processing PDF:', error);
-      toast({
-        title: "Error processing PDF",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const handleCreateMindMap = () => {
     navigate("/processing", {
@@ -80,51 +27,112 @@ export function InputActions({ onTextSubmit, isLoading, content }: InputActionsP
     });
   };
 
-  const handleAudioTranscription = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Audio transcription will be available in a future update",
-    });
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        
+        reader.onload = async () => {
+          const base64Audio = (reader.result as string).split(',')[1];
+          
+          try {
+            toast({
+              title: "Processing audio",
+              description: "Converting speech to text...",
+            });
+
+            const { data, error } = await supabase.functions.invoke('voice-to-text', {
+              body: { audio: base64Audio }
+            });
+
+            if (error) throw error;
+
+            if (data?.text) {
+              navigate("/processing", {
+                state: {
+                  content: data.text,
+                  title: "Voice Recording"
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error processing audio:', error);
+            toast({
+              title: "Error processing audio",
+              description: "Failed to convert speech to text. Please try again.",
+              variant: "destructive",
+            });
+          }
+        };
+
+        reader.readAsDataURL(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      toast({
+        title: "Recording started",
+        description: "Speak clearly into your microphone...",
+      });
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast({
+        title: "Microphone access denied",
+        description: "Please allow microphone access to use voice recording.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
   };
 
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <Button
         onClick={handleCreateMindMap}
-        disabled={isLoading}
+        disabled={isLoading || !content.trim()}
         className="flex-1"
       >
         Create Mind Map
       </Button>
 
-      <div className="flex gap-2 flex-1">
-        <Button
-          variant="outline"
-          className="flex-1"
-          disabled={isLoading}
-          onClick={() => document.getElementById('pdf-upload')?.click()}
-        >
-          <Upload className="mr-2" />
-          Upload PDF
-        </Button>
-        <input
-          type="file"
-          id="pdf-upload"
-          accept=".pdf"
-          onChange={handlePDFUpload}
-          className="hidden"
-        />
-
-        <Button
-          variant="outline"
-          className="flex-1"
-          disabled={isLoading}
-          onClick={handleAudioTranscription}
-        >
-          <Mic className="mr-2" />
-          Record Audio
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        className="flex-1"
+        disabled={isLoading}
+        onClick={isRecording ? stopRecording : startRecording}
+      >
+        {isRecording ? (
+          <>
+            <MicOff className="mr-2" />
+            Stop Recording
+          </>
+        ) : (
+          <>
+            <Mic className="mr-2" />
+            Record Audio
+          </>
+        )}
+      </Button>
     </div>
   );
 }
