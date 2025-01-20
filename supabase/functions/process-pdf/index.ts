@@ -7,25 +7,24 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Get the request body
     const { pdfUrl } = await req.json()
 
     if (!pdfUrl) {
       throw new Error('No PDF URL provided')
     }
 
-    console.log('Processing PDF from URL:', pdfUrl)
+    console.log('Downloading PDF from URL:', pdfUrl)
 
     // Download the PDF file
     const pdfResponse = await fetch(pdfUrl)
     if (!pdfResponse.ok) {
-      throw new Error('Failed to download PDF')
+      console.error('Failed to download PDF:', pdfResponse.status, pdfResponse.statusText)
+      throw new Error(`Failed to download PDF: ${pdfResponse.statusText}`)
     }
 
     // Create Supabase client
@@ -34,32 +33,47 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the PDF content
-    const pdfBuffer = await pdfResponse.arrayBuffer()
-    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)))
+    // Convert ArrayBuffer to Base64
+    const pdfArrayBuffer = await pdfResponse.arrayBuffer()
+    const pdfBase64 = btoa(
+      new Uint8Array(pdfArrayBuffer)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    )
 
     console.log('PDF downloaded and converted to base64')
 
-    // Step 1: Parse PDF into chunks
+    // Parse PDF into chunks
+    console.log('Calling parse-pdf function...')
     const { data: parseData, error: parseError } = await supabase.functions.invoke('parse-pdf', {
       body: { base64PDF: pdfBase64 }
     })
     
-    if (parseError || !parseData?.chunks) {
-      console.error('Error parsing PDF:', parseError)
-      throw new Error('Failed to parse PDF')
+    if (parseError) {
+      console.error('Error from parse-pdf function:', parseError)
+      throw new Error(`Parse PDF error: ${parseError.message}`)
+    }
+    
+    if (!parseData?.chunks) {
+      console.error('No chunks returned from parse-pdf:', parseData)
+      throw new Error('No text chunks extracted from PDF')
     }
 
     console.log(`PDF parsed into ${parseData.chunks.length} chunks`)
 
-    // Step 2: Summarize chunks
+    // Summarize chunks
+    console.log('Calling summarize-chunks function...')
     const { data: summaryData, error: summaryError } = await supabase.functions.invoke('summarize-chunks', {
       body: { chunks: parseData.chunks }
     })
     
-    if (summaryError || !summaryData?.summary) {
-      console.error('Error summarizing chunks:', summaryError)
-      throw new Error('Failed to summarize content')
+    if (summaryError) {
+      console.error('Error from summarize-chunks function:', summaryError)
+      throw new Error(`Summarize chunks error: ${summaryError.message}`)
+    }
+    
+    if (!summaryData?.summary) {
+      console.error('No summary returned from summarize-chunks:', summaryData)
+      throw new Error('Failed to generate summary')
     }
 
     console.log('Content summarized successfully')
@@ -82,7 +96,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         status: 'error',
-        message: error.message 
+        message: error.message,
+        details: error.stack
       }),
       { 
         status: 500,
