@@ -14,25 +14,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
     const checkAuth = async () => {
       try {
-        console.log("Checking authentication status...");
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          if (mounted) {
-            setIsAuthenticated(false);
-            setIsLoading(false);
-            toast({
-              title: "Authentication Error",
-              description: "Please try signing in again.",
-              variant: "destructive",
-            });
-          }
-          return;
-        }
-
         if (!session) {
-          console.log("No active session found");
           if (mounted) {
             setIsAuthenticated(false);
             setIsLoading(false);
@@ -40,38 +24,20 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        console.log("Session found, verifying user...");
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error("User verification error:", userError);
-          if (mounted) {
-            setIsAuthenticated(false);
-            toast({
-              title: "Session Error",
-              description: "Your session has expired. Please sign in again.",
-              variant: "destructive",
-            });
-          }
-        } else {
-          console.log("User verified:", !!user);
-          if (mounted) {
-            setIsAuthenticated(!!user);
-          }
+        if (mounted) {
+          setIsAuthenticated(true);
+          setIsLoading(false);
         }
       } catch (error) {
-        console.error("Unexpected auth error:", error);
+        console.error("Auth check error:", error);
         if (mounted) {
           setIsAuthenticated(false);
+          setIsLoading(false);
           toast({
             title: "Authentication Error",
-            description: "An unexpected error occurred. Please try signing in again.",
+            description: "Please try signing in again.",
             variant: "destructive",
           });
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
         }
       }
     };
@@ -83,33 +49,24 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
-      console.log("Auth state changed:", event, session);
+      console.log("Auth state changed:", event);
       
       switch (event) {
         case 'SIGNED_IN':
-          console.log("User signed in");
           setIsAuthenticated(true);
           break;
         case 'SIGNED_OUT':
-          console.log("User signed out");
           setIsAuthenticated(false);
           break;
         case 'TOKEN_REFRESHED':
-          console.log("Token refreshed, session:", !!session);
-          setIsAuthenticated(!!session);
-          break;
         case 'USER_UPDATED':
-          console.log("User updated, session:", !!session);
           setIsAuthenticated(!!session);
           break;
-        default:
-          console.log("Unhandled auth event:", event);
       }
       setIsLoading(false);
     });
 
     return () => {
-      console.log("Cleaning up auth subscriptions");
       mounted = false;
       subscription.unsubscribe();
     };
@@ -123,8 +80,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+  // Only redirect if we're certain about the authentication state
+  if (isAuthenticated === false) {
+    // Prevent infinite loops by checking if we're already on the auth page
+    if (location.pathname !== '/auth') {
+      return <Navigate to="/auth" state={{ from: location }} replace />;
+    }
   }
 
   return <>{children}</>;
