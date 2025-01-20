@@ -95,7 +95,6 @@ export default function Auth() {
                 },
               },
             }}
-            providers={["google"]}
           />
         </div>
       </div>
