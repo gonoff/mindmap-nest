@@ -73,7 +73,7 @@ export default function MindMapViewer() {
         ...node,
         type: 'default',
         data: { label: node.label },
-        draggable: isEditing,
+        draggable: true, // Always allow dragging
         connectable: isEditing,
         position: node.position || { x: 0, y: 0 },
         style: node.style || {
@@ -108,7 +108,7 @@ export default function MindMapViewer() {
         nodes: nodes.map(node => ({
           id: node.id,
           label: node.data.label,
-          position: node.position,
+          position: node.position, // Save the updated positions
           style: node.style,
         })),
         edges: edges.map(edge => ({
