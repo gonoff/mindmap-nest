@@ -5,9 +5,11 @@ import { Auth as SupabaseAuth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -17,8 +19,52 @@ export default function Auth() {
       }
     };
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        navigate("/library");
+      }
+      
+      if (event === 'USER_UPDATED') {
+        checkAuth();
+      }
+    });
+
     checkAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
+
+  // Handle auth errors through the auth state change listener
+  useEffect(() => {
+    const handleAuthError = (error: Error) => {
+      const errorMessage = error.message;
+      if (errorMessage.includes('user_already_exists')) {
+        toast({
+          title: "Account Already Exists",
+          description: "This email is already registered. Please sign in instead.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Authentication Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session, error) => {
+      if (error) {
+        handleAuthError(error);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [toast]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
