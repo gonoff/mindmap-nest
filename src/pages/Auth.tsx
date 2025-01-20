@@ -95,6 +95,9 @@ export default function Auth() {
                 },
               },
             }}
+            view="sign_in"
+            showLinks={false}
+            providers={[]}
           />
         </div>
       </div>
