@@ -44,15 +44,15 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
   };
 
   return (
-    <Card className="relative group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 animate-floating hover:scale-[1.01] hover:-translate-y-1 bg-orange-500/20">
+    <Card className="relative group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 animate-floating hover:scale-[1.01] hover:-translate-y-1 bg-orange-500/20 h-[120px] shadow-[0_0_15px_rgba(249,115,22,0.3)]">
       {/* Background gradient with pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-orange-600/20 transition-all duration-300 group-hover:scale-105">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_0)] bg-[size:24px_24px]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-orange-600/30 transition-all duration-300 group-hover:scale-105">
+        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_0)] bg-[size:24px_24px]" />
       </div>
       
       {/* Content overlay with glass effect */}
       <div 
-        className="relative cursor-pointer p-3 flex flex-col bg-gradient-to-b from-black/0 to-black/20 hover:to-black/30 transition-all duration-500 h-[60px]"
+        className="relative cursor-pointer p-3 flex flex-col bg-gradient-to-b from-black/0 to-black/30 hover:to-black/40 transition-all duration-500 h-full"
         onClick={() => !isRenaming && navigate(`/mindmap/${id}`)}
       >
         <div className="flex-1 transform transition-transform duration-300 group-hover:translate-y-0.5">
