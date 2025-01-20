@@ -15,7 +15,35 @@ interface ChunkSummary {
   topics: Topic[];
 }
 
+const CHUNK_PROMPT = `You are an AI assistant helping summarize part of a PDF document. 
+Extract key points, main ideas, and hierarchical topics. If the text is repetitive, 
+try to consolidate redundant information. Please return a structured JSON in this shape:
+
+{
+  "topics": [
+    {
+      "title": "...",
+      "subtopics": [
+        { "title": "...", "subtopics": [ ... ] }, 
+        ...
+      ]
+    },
+    ...
+  ]
+}
+
+Make sure you keep the hierarchical relationships. The top-level "topics" 
+are major sections, and "subtopics" nest inside them. 
+
+Avoid any extra commentary or text outside of the JSON structure.`;
+
+const MERGE_PROMPT = `You are an AI assistant. You have several JSON summaries (with "topics" arrays). 
+Please merge them into a single combined JSON with the same structure, merging duplicates 
+or overlapping topics where reasonable. Return only the final JSON, no extra commentary.`;
+
 async function summarizeChunk(chunk: string, chunkIndex: number): Promise<ChunkSummary> {
+  console.log(`Processing chunk ${chunkIndex + 1}`);
+  
   const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -27,30 +55,11 @@ async function summarizeChunk(chunk: string, chunkIndex: number): Promise<ChunkS
       messages: [
         {
           role: 'system',
-          content: `You are analyzing part ${chunkIndex + 1} of a PDF document. Extract key points and create a hierarchical structure of topics.
-          Be concise and focus on main ideas and their relationships.
-          Format your response as a clean JSON structure.`
+          content: CHUNK_PROMPT
         },
         {
           role: 'user',
-          content: `Please analyze this text and extract key topics and subtopics in a hierarchical structure:
-
-${chunk}
-
-Return your analysis in this exact JSON format:
-{
-  "topics": [
-    {
-      "title": "Main Topic",
-      "subtopics": [
-        {
-          "title": "Subtopic",
-          "subtopics": []
-        }
-      ]
-    }
-  ]
-}`
+          content: chunk
         }
       ],
       temperature: 0.3,
@@ -71,6 +80,8 @@ async function mergeSummaries(summaries: ChunkSummary[]): Promise<ChunkSummary> 
     return summaries[0];
   }
 
+  console.log(`Merging ${summaries.length} summaries`);
+
   const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -82,28 +93,11 @@ async function mergeSummaries(summaries: ChunkSummary[]): Promise<ChunkSummary> 
       messages: [
         {
           role: 'system',
-          content: 'You are merging multiple topic hierarchies from different parts of a document into a single coherent structure. Combine similar topics, maintain hierarchical relationships, and create a clean, unified structure.'
+          content: MERGE_PROMPT
         },
         {
           role: 'user',
-          content: `Here are separate topic hierarchies from different parts of the document. Please merge them into a single coherent structure, combining similar topics and maintaining proper relationships:
-
-${JSON.stringify(summaries, null, 2)}
-
-Return the merged structure in this exact JSON format:
-{
-  "topics": [
-    {
-      "title": "Main Topic",
-      "subtopics": [
-        {
-          "title": "Subtopic",
-          "subtopics": []
-        }
-      ]
-    }
-  ]
-}`
+          content: JSON.stringify(summaries)
         }
       ],
       temperature: 0.3,
