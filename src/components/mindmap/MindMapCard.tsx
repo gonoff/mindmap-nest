@@ -44,15 +44,15 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
   };
 
   return (
-    <Card className="aspect-square relative group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 animate-floating hover:scale-[1.02] hover:-translate-y-1">
+    <Card className="relative group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 animate-floating hover:scale-[1.01] hover:-translate-y-1 bg-orange-500/10">
       {/* Background gradient with pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-600 transition-all duration-300 group-hover:scale-105">
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-orange-600/10 transition-all duration-300 group-hover:scale-105">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_0)] bg-[size:24px_24px]" />
       </div>
       
       {/* Content overlay with glass effect */}
       <div 
-        className="absolute inset-0 cursor-pointer p-6 flex flex-col bg-gradient-to-b from-black/0 to-black/20 hover:to-black/30 transition-all duration-500"
+        className="relative cursor-pointer p-4 flex flex-col bg-gradient-to-b from-black/0 to-black/10 hover:to-black/20 transition-all duration-500 h-[180px]"
         onClick={() => !isRenaming && navigate(`/mindmap/${id}`)}
       >
         <div className="flex-1 transform transition-transform duration-300 group-hover:translate-y-1">
@@ -72,17 +72,17 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
               </Button>
             </div>
           ) : (
-            <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 drop-shadow-sm">
+            <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-2 drop-shadow-sm">
               {title}
             </h3>
           )}
-          <p className="text-sm text-white/70 backdrop-blur-sm inline-block px-2 py-1 rounded-full bg-black/10 transform transition-all duration-300 group-hover:bg-black/20">
+          <p className="text-sm text-foreground/70 backdrop-blur-sm inline-block px-2 py-1 rounded-full bg-black/10 transform transition-all duration-300 group-hover:bg-black/20">
             Created {formattedDate}
           </p>
         </div>
         
         {/* Decorative elements */}
-        <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-tl-full transform translate-x-16 translate-y-16 transition-transform duration-300 group-hover:translate-x-12 group-hover:translate-y-12" />
+        <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-tl-full transform translate-x-12 translate-y-12 transition-transform duration-300 group-hover:translate-x-8 group-hover:translate-y-8" />
       </div>
 
       <DropdownMenu>
@@ -90,7 +90,7 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:bg-white/10 z-10"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-white/10 z-10"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
