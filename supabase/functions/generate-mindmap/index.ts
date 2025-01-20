@@ -6,13 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function calculateNodePosition(level: number, index: number, totalNodesInLevel: number, parentX = 0, parentY = 0) {
-  const LEVEL_RADIUS = 250;
-  const angle = (2 * Math.PI * index) / totalNodesInLevel - Math.PI / 2;
+function calculateNodePosition(level: number, index: number, totalNodesInLevel: number) {
+  const SPACING_MULTIPLIER = 200;
+  const LEVEL_SPACING = 150;
+  
+  if (level === 0) return { x: 0, y: 0 };
+  
+  // Calculate angle based on index and total nodes in level
+  const angleStep = (2 * Math.PI) / totalNodesInLevel;
+  const angle = index * angleStep - Math.PI / 2; // Start from top
+  
+  // Calculate radius based on level
+  const radius = level * LEVEL_SPACING;
   
   return {
-    x: parentX + LEVEL_RADIUS * level * Math.cos(angle),
-    y: parentY + LEVEL_RADIUS * level * Math.sin(angle)
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius
   };
 }
 
@@ -41,33 +50,38 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a mind map generator that creates clear, hierarchical mind maps from text. Output ONLY valid JSON with this structure:
-{
-  "nodes": [
-    {
-      "id": "string",
-      "label": "string (30 chars max)",
-      "level": number (0 for center, 1-3 for branches)
-    }
-  ],
-  "edges": [
-    {
-      "id": "string",
-      "source": "string (node id)",
-      "target": "string (node id)"
-    }
-  ]
-}
+            content: `You are a mind map generator that creates clear, hierarchical mind maps from text content. 
+            Create a mind map with the following structure:
 
-Follow these guidelines:
-1. Create a clear central theme (level 0)
-2. 4-6 main concepts (level 1)
-3. 2-4 supporting ideas per main concept (level 2)
-4. Optional details (level 3, max 2 per level 2 node)
-5. Keep labels clear and concise (under 30 chars)
-6. Ensure logical connections between nodes
-7. Maintain hierarchical structure
-8. Focus on key relationships`
+            1. Central Theme (level 0):
+               - One central concept that captures the main topic
+            
+            2. Main Branches (level 1):
+               - 4-6 key concepts that directly relate to the central theme
+               - Use clear, concise labels (max 25 characters)
+            
+            3. Sub-branches (level 2):
+               - 2-3 supporting ideas per main branch
+               - Provide specific details or examples
+               - Keep labels focused and brief
+            
+            Output ONLY valid JSON with this exact structure:
+            {
+              "nodes": [
+                {
+                  "id": "string",
+                  "label": "string (max 25 chars)",
+                  "level": number (0-2)
+                }
+              ],
+              "edges": [
+                {
+                  "id": "string",
+                  "source": "string (parent node id)",
+                  "target": "string (child node id)"
+                }
+              ]
+            }`
           },
           {
             role: 'user',
@@ -75,7 +89,7 @@ Follow these guidelines:
           }
         ],
         temperature: 0.3,
-        max_tokens: 4000,
+        max_tokens: 2000,
       }),
     })
 
@@ -97,57 +111,41 @@ Follow these guidelines:
       rawMindMap = JSON.parse(aiResult.choices[0].message.content.trim())
       
       if (!Array.isArray(rawMindMap.nodes) || !Array.isArray(rawMindMap.edges)) {
-        throw new Error('Invalid mind map structure: missing nodes or edges arrays')
+        throw new Error('Invalid mind map structure')
       }
-
-      rawMindMap.nodes.forEach((node: any, index: number) => {
-        if (!node.id || !node.label || typeof node.level !== 'number') {
-          throw new Error(`Invalid node at index ${index}: ${JSON.stringify(node)}`)
-        }
-      })
-
-      rawMindMap.edges.forEach((edge: any, index: number) => {
-        if (!edge.id || !edge.source || !edge.target) {
-          throw new Error(`Invalid edge at index ${index}: ${JSON.stringify(edge)}`)
-        }
-      })
-
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', aiResult.choices[0].message.content)
       throw new Error(`Failed to parse mind map structure: ${parseError.message}`)
     }
 
+    // Group nodes by level for position calculation
+    const nodesByLevel = rawMindMap.nodes.reduce((acc, node) => {
+      acc[node.level] = acc[node.level] || [];
+      acc[node.level].push(node);
+      return acc;
+    }, {});
+
+    // Calculate positions for each node
     const processedNodes = rawMindMap.nodes.map(node => {
-      const nodesInSameLevel = rawMindMap.nodes.filter(n => n.level === node.level)
-      const levelIndex = nodesInSameLevel.findIndex(n => n.id === node.id)
-      
-      const parentEdge = rawMindMap.edges.find(e => e.target === node.id)
-      const parentNode = parentEdge 
-        ? rawMindMap.nodes.find(n => n.id === parentEdge.source)
-        : null
-      
-      const position = calculateNodePosition(
-        node.level,
-        levelIndex,
-        nodesInSameLevel.length,
-        parentNode?.position?.x,
-        parentNode?.position?.y
-      )
+      const nodesInLevel = nodesByLevel[node.level];
+      const indexInLevel = nodesInLevel.findIndex(n => n.id === node.id);
+      const position = calculateNodePosition(node.level, indexInLevel, nodesInLevel.length);
 
       return {
         id: node.id,
         label: node.label,
         position,
         style: {
-          background: node.level === 0 ? 'hsl(var(--primary))' : 'hsl(var(--background))',
-          color: node.level === 0 ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
+          background: node.level === 0 ? 'hsl(var(--primary))' : 'rgba(0, 0, 0, 0.8)',
+          color: node.level === 0 ? 'hsl(var(--primary-foreground))' : '#fff',
           border: '1px solid hsl(var(--primary))',
           borderRadius: '8px',
           padding: '12px 20px',
-          fontSize: node.level === 0 ? '16px' : '14px',
+          fontSize: node.level === 0 ? '18px' : '14px',
           fontWeight: node.level <= 1 ? 'bold' : 'normal',
           width: 'auto',
           maxWidth: '200px',
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
         }
       }
     })
@@ -157,7 +155,7 @@ Follow these guidelines:
       edges: rawMindMap.edges.map(edge => ({
         ...edge,
         type: 'smoothstep',
-        animated: false,
+        animated: true,
         style: { 
           stroke: 'hsl(var(--primary))',
           strokeWidth: 2,

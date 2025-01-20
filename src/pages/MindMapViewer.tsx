@@ -73,9 +73,22 @@ export default function MindMapViewer() {
         ...node,
         type: 'default',
         data: { label: node.label },
-        position: node.position || { x: 0, y: 0 }, // Ensure position exists
+        draggable: isEditing,
+        connectable: isEditing,
+        position: node.position || { x: 0, y: 0 },
+        style: node.style || {
+          background: 'hsl(var(--background))',
+          color: 'hsl(var(--foreground))',
+        },
       })));
-      setEdges(content.edges);
+      
+      setEdges(content.edges.map(edge => ({
+        ...edge,
+        animated: true,
+        style: edge.style || {
+          stroke: 'hsl(var(--primary))',
+        },
+      })));
     } catch (error) {
       console.error('Error fetching mind map:', error);
       toast({
@@ -91,21 +104,21 @@ export default function MindMapViewer() {
     try {
       if (!id) return;
 
-      // Create and validate the mind map structure before saving
       const mindMapContent: MindMapStructure = {
         nodes: nodes.map(node => ({
           id: node.id,
           label: node.data.label,
           position: node.position,
+          style: node.style,
         })),
         edges: edges.map(edge => ({
           id: edge.id,
           source: edge.source,
           target: edge.target,
+          style: edge.style,
         })),
       };
 
-      // Validate the structure before saving
       const validatedContent = MindMapStructureSchema.parse(mindMapContent);
 
       const { error } = await supabase
