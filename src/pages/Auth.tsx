@@ -10,64 +10,19 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    let mounted = true;
-
-    const checkAuth = async () => {
-      try {
-        console.log("Checking initial session...");
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session check error:", error);
-          if (mounted) {
-            toast({
-              variant: "destructive",
-              title: "Authentication Error",
-              description: "There was an error checking your session. Please try again.",
-            });
-          }
-          return;
-        }
-
-        if (session && mounted) {
-          console.log("Active session found, redirecting...");
-          navigate("/library");
-        }
-      } catch (error) {
-        console.error("Unexpected error during session check:", error);
-        if (mounted) {
-          toast({
-            variant: "destructive",
-            title: "System Error",
-            description: "An unexpected error occurred. Please refresh and try again.",
-          });
-        }
-      }
-    };
-
-    // Initial auth check
-    checkAuth();
-
-    // Set up auth state listener
+    // Single auth state listener instead of separate session check
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-
-      console.log("Auth state changed:", event, session?.user?.id);
+      console.log("Auth state changed:", event);
       
-      if (event === 'SIGNED_IN' && session) {
-        console.log("User signed in successfully");
-        navigate("/library");
-      } else if (event === 'SIGNED_OUT') {
-        console.log("User signed out");
-      } else if (event === 'USER_UPDATED' && session) {
-        console.log("User profile updated");
+      if (session) {
+        console.log("Session found, redirecting to library");
         navigate("/library");
       }
     });
 
+    // Cleanup subscription
     return () => {
-      console.log("Cleaning up auth component...");
-      mounted = false;
+      console.log("Cleaning up auth subscriptions");
       subscription.unsubscribe();
     };
   }, [navigate, toast]);
