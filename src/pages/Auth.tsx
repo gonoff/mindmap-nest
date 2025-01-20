@@ -4,48 +4,70 @@ import { Auth as SupabaseAuth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AuthError } from "@supabase/supabase-js";
 
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Session check error:", sessionError);
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "There was an error checking your session. Please try again.",
-        });
-        return;
-      }
+    let mounted = true;
 
-      if (session) {
-        navigate("/library");
+    const checkAuth = async () => {
+      try {
+        console.log("Checking initial session...");
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session check error:", error);
+          if (mounted) {
+            toast({
+              variant: "destructive",
+              title: "Authentication Error",
+              description: "There was an error checking your session. Please try again.",
+            });
+          }
+          return;
+        }
+
+        if (session && mounted) {
+          console.log("Active session found, redirecting...");
+          navigate("/library");
+        }
+      } catch (error) {
+        console.error("Unexpected error during session check:", error);
+        if (mounted) {
+          toast({
+            variant: "destructive",
+            title: "System Error",
+            description: "An unexpected error occurred. Please refresh and try again.",
+          });
+        }
       }
     };
+
+    // Initial auth check
     checkAuth();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth event:", event);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      console.log("Auth state changed:", event, session?.user?.id);
       
       if (event === 'SIGNED_IN' && session) {
-        navigate("/library");
-      } else if (event === 'USER_UPDATED' && session) {
+        console.log("User signed in successfully");
         navigate("/library");
       } else if (event === 'SIGNED_OUT') {
-        navigate("/auth");
+        console.log("User signed out");
+      } else if (event === 'USER_UPDATED' && session) {
+        console.log("User profile updated");
+        navigate("/library");
       }
     });
 
     return () => {
+      console.log("Cleaning up auth component...");
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [navigate, toast]);
