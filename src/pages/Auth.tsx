@@ -10,19 +10,48 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Single auth state listener instead of separate session check
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    let mounted = true;
+
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Session check error:", error);
+          if (mounted) {
+            toast({
+              variant: "destructive",
+              title: "Authentication Error",
+              description: "Please check your network connection and try again.",
+            });
+          }
+          return;
+        }
+
+        if (session && mounted) {
+          navigate("/library");
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+      }
+    };
+
+    // Initial session check
+    checkAuth();
+
+    // Auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       console.log("Auth state changed:", event);
       
-      if (session) {
-        console.log("Session found, redirecting to library");
+      if (event === 'SIGNED_IN' && session) {
         navigate("/library");
       }
     });
 
-    // Cleanup subscription
     return () => {
-      console.log("Cleaning up auth subscriptions");
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [navigate, toast]);
@@ -60,7 +89,7 @@ export default function Auth() {
           },
         }}
         providers={[]}
-        redirectTo={`${window.location.origin}/library`}
+        redirectTo={window.location.origin + "/library"}
       />
     </div>
   );
