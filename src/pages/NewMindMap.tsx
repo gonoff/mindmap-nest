@@ -16,7 +16,7 @@ export default function NewMindMap() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/library")}
           className="h-8 w-8"
         >
           <ArrowLeft className="h-4 w-4" />
