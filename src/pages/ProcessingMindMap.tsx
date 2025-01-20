@@ -11,9 +11,22 @@ export default function ProcessingMindMap() {
   const location = useLocation();
   const { toast } = useToast();
   const [progress, setProgress] = useState(0);
-  const { content, title } = location.state as { content: string; title: string };
 
   useEffect(() => {
+    // Validate location state
+    if (!location.state?.content || !location.state?.title) {
+      console.error("Missing required state:", location.state);
+      toast({
+        title: "Error",
+        description: "Missing required content. Please try again.",
+        variant: "destructive",
+      });
+      navigate("/new");
+      return;
+    }
+
+    const { content, title } = location.state;
+
     const processContent = async () => {
       try {
         // Check authentication first
@@ -54,6 +67,8 @@ export default function ProcessingMindMap() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         setProgress(50);
 
+        console.log('Generating mind map with content:', content.substring(0, 100) + '...');
+
         // Generate mind map structure from content
         const mindMapStructure = await generateMindMap(content);
         await new Promise(resolve => setTimeout(resolve, 1200));
@@ -70,7 +85,10 @@ export default function ProcessingMindMap() {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error inserting mind map:', error);
+          throw error;
+        }
 
         // Final progress and delay
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -95,7 +113,7 @@ export default function ProcessingMindMap() {
     };
 
     processContent();
-  }, [content, navigate, toast, title]);
+  }, [navigate, toast, location.state]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
