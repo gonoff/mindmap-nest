@@ -36,7 +36,8 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
   const [isRenaming, setIsRenaming] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
 
-  const formattedDate = format(new Date(created_at), "MMM d, yyyy 'at' h:mm a");
+  const formattedDate = format(new Date(created_at), "MMM d, yyyy");
+  const formattedTime = format(new Date(created_at), "h:mm a");
 
   const handleRename = async () => {
     await onRename(id, newTitle);
@@ -52,10 +53,10 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
       
       {/* Content overlay with glass effect */}
       <div 
-        className="relative cursor-pointer p-3 flex flex-col bg-gradient-to-b from-black/0 to-black/30 hover:to-black/40 transition-all duration-500 h-full"
+        className="relative cursor-pointer p-3 flex flex-col justify-between bg-gradient-to-b from-black/0 to-black/30 hover:to-black/40 transition-all duration-500 h-full"
         onClick={() => !isRenaming && navigate(`/mindmap/${id}`)}
       >
-        <div className="flex-1 transform transition-transform duration-300 group-hover:translate-y-0.5">
+        <div className="flex-1">
           {isRenaming ? (
             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
               <Input
@@ -72,15 +73,15 @@ export function MindMapCard({ id, title, created_at, onDelete, onRename }: MindM
               </Button>
             </div>
           ) : (
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-foreground line-clamp-1 drop-shadow-sm">
-                {title}
-              </h3>
-              <p className="text-xs text-foreground/70 backdrop-blur-sm px-1.5 py-0.5 rounded-full bg-black/20">
-                {format(new Date(created_at), "MMM d")}
-              </p>
-            </div>
+            <h3 className="text-sm font-bold text-foreground line-clamp-1 drop-shadow-sm">
+              {title}
+            </h3>
           )}
+        </div>
+
+        <div className="flex flex-col items-end text-[10px] text-foreground/70 backdrop-blur-sm px-1.5 py-0.5 rounded-md bg-black/20 w-fit ml-auto">
+          <span>{formattedDate}</span>
+          <span>{formattedTime}</span>
         </div>
       </div>
 
