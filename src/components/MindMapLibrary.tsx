@@ -61,6 +61,30 @@ export function MindMapLibrary() {
     }
   };
 
+  const handleRename = async (id: string, newTitle: string) => {
+    try {
+      const { error } = await supabase
+        .from("mindmaps")
+        .update({ title: newTitle })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["mindmaps"] });
+
+      toast({
+        title: "Mind map renamed",
+        description: "The mind map has been successfully renamed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error renaming mind map",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -81,6 +105,7 @@ export function MindMapLibrary() {
             title={mindMap.title}
             created_at={mindMap.created_at}
             onDelete={handleDelete}
+            onRename={handleRename}
           />
         ))}
         
