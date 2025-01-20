@@ -9,12 +9,14 @@ export const MindMapNodeSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
+  style: z.record(z.string(), z.any()).optional(),
 });
 
 export const MindMapEdgeSchema = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
+  style: z.record(z.string(), z.any()).optional(),
 });
 
 export const MindMapStructureSchema = z.object({
