@@ -53,7 +53,29 @@ function calculateNodePosition(level: number, index: number, totalNodesInLevel: 
   };
 }
 
-function generateMindMap(summary: Summary): MindMapStructure {
+function parseContentToTopics(content: string): Topic[] {
+  // Split content by commas and clean up each topic
+  const topics = content.split(',').map(topic => topic.trim()).filter(Boolean);
+  
+  // Create a root topic with subtopics
+  if (topics.length === 0) {
+    return [{
+      title: "Empty Mind Map",
+      subtopics: []
+    }];
+  }
+
+  // Use the first topic as main topic and rest as subtopics
+  return [{
+    title: topics[0],
+    subtopics: topics.slice(1).map(topic => ({
+      title: topic
+    }))
+  }];
+}
+
+function generateMindMap(content: string): MindMapStructure {
+  const topics = parseContentToTopics(content);
   const nodes: MindMapNode[] = [];
   const edges: MindMapEdge[] = [];
   let nodeIndex = 0;
@@ -110,7 +132,7 @@ function generateMindMap(summary: Summary): MindMapStructure {
   }
   
   // Process all root topics
-  summary.topics.forEach(topic => {
+  topics.forEach(topic => {
     processNode(topic, 0);
   });
   
@@ -140,7 +162,7 @@ serve(async (req) => {
       throw new Error('No content provided')
     }
 
-    console.log('Generating mind map from summary:', JSON.stringify(content))
+    console.log('Generating mind map from content:', content)
 
     const mindMapStructure = generateMindMap(content)
     
