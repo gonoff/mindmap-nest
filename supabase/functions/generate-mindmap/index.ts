@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface Topic {
+  title: string;
+  subtopics?: Topic[];
+}
+
+interface Summary {
+  topics: Topic[];
+}
+
+interface MindMapNode {
+  id: string;
+  label: string;
+  position: { x: number; y: number };
+  style?: Record<string, unknown>;
+}
+
+interface MindMapEdge {
+  id: string;
+  source: string;
+  target: string;
+  style?: Record<string, unknown>;
+}
+
+interface MindMapStructure {
+  nodes: MindMapNode[];
+  edges: MindMapEdge[];
+}
+
 function calculateNodePosition(level: number, index: number, totalNodesInLevel: number) {
   const SPACING_MULTIPLIER = 200;
   const LEVEL_SPACING = 150;
@@ -25,6 +53,81 @@ function calculateNodePosition(level: number, index: number, totalNodesInLevel: 
   };
 }
 
+function generateMindMap(summary: Summary): MindMapStructure {
+  const nodes: MindMapNode[] = [];
+  const edges: MindMapEdge[] = [];
+  let nodeIndex = 0;
+
+  // First pass: Create nodes and collect level information
+  const nodesByLevel: { [level: number]: MindMapNode[] } = {};
+  
+  function processNode(topic: Topic, level: number, parentId?: string) {
+    const currentId = `node-${nodeIndex++}`;
+    
+    // Store node in its level group
+    nodesByLevel[level] = nodesByLevel[level] || [];
+    const node: MindMapNode = {
+      id: currentId,
+      label: topic.title,
+      position: { x: 0, y: 0 }, // Temporary position
+      style: {
+        background: level === 0 ? 'hsl(var(--primary))' : 'rgba(0, 0, 0, 0.8)',
+        color: level === 0 ? 'hsl(var(--primary-foreground))' : '#fff',
+        border: '1px solid hsl(var(--primary))',
+        borderRadius: '8px',
+        padding: '12px 20px',
+        fontSize: level === 0 ? '18px' : '14px',
+        fontWeight: level <= 1 ? 'bold' : 'normal',
+        width: 'auto',
+        maxWidth: '200px',
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+      }
+    };
+    
+    nodesByLevel[level].push(node);
+    nodes.push(node);
+    
+    // Create edge if there's a parent
+    if (parentId) {
+      edges.push({
+        id: `edge-${parentId}-${currentId}`,
+        source: parentId,
+        target: currentId,
+        style: {
+          stroke: 'hsl(var(--primary))',
+          strokeWidth: 2,
+          opacity: 0.8
+        }
+      });
+    }
+    
+    // Process subtopics
+    if (topic.subtopics) {
+      topic.subtopics.forEach(subtopic => {
+        processNode(subtopic, level + 1, currentId);
+      });
+    }
+  }
+  
+  // Process all root topics
+  summary.topics.forEach(topic => {
+    processNode(topic, 0);
+  });
+  
+  // Second pass: Calculate and set final positions
+  Object.entries(nodesByLevel).forEach(([level, nodesInLevel]) => {
+    nodesInLevel.forEach((node, index) => {
+      node.position = calculateNodePosition(
+        parseInt(level),
+        index,
+        nodesInLevel.length
+      );
+    });
+  });
+  
+  return { nodes, edges };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -37,133 +140,10 @@ serve(async (req) => {
       throw new Error('No content provided')
     }
 
-    console.log('Generating mind map for content:', content.substring(0, 100) + '...')
+    console.log('Generating mind map from summary:', JSON.stringify(content))
 
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a mind map generator that creates clear, hierarchical mind maps from text content. 
-            Create a mind map with the following structure:
-
-            1. Central Theme (level 0):
-               - One central concept that captures the main topic
-            
-            2. Main Branches (level 1):
-               - 4-6 key concepts that directly relate to the central theme
-               - Use clear, concise labels (max 25 characters)
-            
-            3. Sub-branches (level 2):
-               - 2-3 supporting ideas per main branch
-               - Provide specific details or examples
-               - Keep labels focused and brief
-            
-            Output ONLY valid JSON with this exact structure:
-            {
-              "nodes": [
-                {
-                  "id": "string",
-                  "label": "string (max 25 chars)",
-                  "level": number (0-2)
-                }
-              ],
-              "edges": [
-                {
-                  "id": "string",
-                  "source": "string (parent node id)",
-                  "target": "string (child node id)"
-                }
-              ]
-            }`
-          },
-          {
-            role: 'user',
-            content
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
-    })
-
-    if (!openAIResponse.ok) {
-      const errorText = await openAIResponse.text()
-      console.error('OpenAI API error:', errorText)
-      throw new Error(`OpenAI API error: ${errorText}`)
-    }
-
-    const aiResult = await openAIResponse.json()
-    console.log('OpenAI response:', JSON.stringify(aiResult))
-
-    if (!aiResult.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI')
-    }
-
-    let rawMindMap
-    try {
-      rawMindMap = JSON.parse(aiResult.choices[0].message.content.trim())
-      
-      if (!Array.isArray(rawMindMap.nodes) || !Array.isArray(rawMindMap.edges)) {
-        throw new Error('Invalid mind map structure')
-      }
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', aiResult.choices[0].message.content)
-      throw new Error(`Failed to parse mind map structure: ${parseError.message}`)
-    }
-
-    // Group nodes by level for position calculation
-    const nodesByLevel = rawMindMap.nodes.reduce((acc, node) => {
-      acc[node.level] = acc[node.level] || [];
-      acc[node.level].push(node);
-      return acc;
-    }, {});
-
-    // Calculate positions for each node
-    const processedNodes = rawMindMap.nodes.map(node => {
-      const nodesInLevel = nodesByLevel[node.level];
-      const indexInLevel = nodesInLevel.findIndex(n => n.id === node.id);
-      const position = calculateNodePosition(node.level, indexInLevel, nodesInLevel.length);
-
-      return {
-        id: node.id,
-        label: node.label,
-        position,
-        style: {
-          background: node.level === 0 ? 'hsl(var(--primary))' : 'rgba(0, 0, 0, 0.8)',
-          color: node.level === 0 ? 'hsl(var(--primary-foreground))' : '#fff',
-          border: '1px solid hsl(var(--primary))',
-          borderRadius: '8px',
-          padding: '12px 20px',
-          fontSize: node.level === 0 ? '18px' : '14px',
-          fontWeight: node.level <= 1 ? 'bold' : 'normal',
-          width: 'auto',
-          maxWidth: '200px',
-          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-        }
-      }
-    })
-
-    const mindMapStructure = {
-      nodes: processedNodes,
-      edges: rawMindMap.edges.map(edge => ({
-        ...edge,
-        type: 'smoothstep',
-        animated: true,
-        style: { 
-          stroke: 'hsl(var(--primary))',
-          strokeWidth: 2,
-          opacity: 0.8
-        }
-      }))
-    }
-
+    const mindMapStructure = generateMindMap(content)
+    
     console.log('Generated mind map structure:', JSON.stringify(mindMapStructure))
 
     return new Response(
