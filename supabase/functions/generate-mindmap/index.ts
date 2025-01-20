@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Helper function to calculate node positions in a radial layout
 function calculateNodePosition(level: number, index: number, totalNodesInLevel: number, parentX = 0, parentY = 0) {
   const LEVEL_RADIUS = 250;
   const angle = (2 * Math.PI * index) / totalNodesInLevel - Math.PI / 2;
@@ -18,7 +17,6 @@ function calculateNodePosition(level: number, index: number, totalNodesInLevel: 
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -39,11 +37,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a mind map generator that creates hierarchical mind maps from text. Output ONLY valid JSON with this exact structure:
+            content: `You are a mind map generator that creates clear, hierarchical mind maps from text. Output ONLY valid JSON with this structure:
 {
   "nodes": [
     {
@@ -61,14 +59,15 @@ serve(async (req) => {
   ]
 }
 
-Follow these rules:
-1. Central node is level 0
-2. 4-6 main branches (level 1)
-3. 2-4 sub-branches per main branch (level 2)
-4. Optional level 3 nodes (1-2 per level 2 node)
-5. Keep labels under 30 characters
-6. Ensure all edges connect existing nodes
-7. Use descriptive but concise labels`
+Follow these guidelines:
+1. Create a clear central theme (level 0)
+2. 4-6 main concepts (level 1)
+3. 2-4 supporting ideas per main concept (level 2)
+4. Optional details (level 3, max 2 per level 2 node)
+5. Keep labels clear and concise (under 30 chars)
+6. Ensure logical connections between nodes
+7. Maintain hierarchical structure
+8. Focus on key relationships`
           },
           {
             role: 'user',
@@ -97,19 +96,16 @@ Follow these rules:
     try {
       rawMindMap = JSON.parse(aiResult.choices[0].message.content.trim())
       
-      // Validate the structure
       if (!Array.isArray(rawMindMap.nodes) || !Array.isArray(rawMindMap.edges)) {
         throw new Error('Invalid mind map structure: missing nodes or edges arrays')
       }
 
-      // Validate each node
       rawMindMap.nodes.forEach((node: any, index: number) => {
         if (!node.id || !node.label || typeof node.level !== 'number') {
           throw new Error(`Invalid node at index ${index}: ${JSON.stringify(node)}`)
         }
       })
 
-      // Validate each edge
       rawMindMap.edges.forEach((edge: any, index: number) => {
         if (!edge.id || !edge.source || !edge.target) {
           throw new Error(`Invalid edge at index ${index}: ${JSON.stringify(edge)}`)
@@ -121,7 +117,6 @@ Follow these rules:
       throw new Error(`Failed to parse mind map structure: ${parseError.message}`)
     }
 
-    // Process the nodes to add positions
     const processedNodes = rawMindMap.nodes.map(node => {
       const nodesInSameLevel = rawMindMap.nodes.filter(n => n.level === node.level)
       const levelIndex = nodesInSameLevel.findIndex(n => n.id === node.id)
@@ -163,7 +158,11 @@ Follow these rules:
         ...edge,
         type: 'smoothstep',
         animated: false,
-        style: { stroke: 'hsl(var(--primary))', strokeWidth: 2 }
+        style: { 
+          stroke: 'hsl(var(--primary))',
+          strokeWidth: 2,
+          opacity: 0.8
+        }
       }))
     }
 
