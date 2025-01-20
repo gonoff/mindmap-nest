@@ -6,20 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface Topic {
-  title: string;
-  subtopics?: Topic[];
-}
-
-interface Summary {
-  topics: Topic[];
-}
-
 interface MindMapNode {
   id: string;
   label: string;
   position: { x: number; y: number };
   style?: Record<string, unknown>;
+  summary?: string;
 }
 
 interface MindMapEdge {
@@ -34,17 +26,26 @@ interface MindMapStructure {
   edges: MindMapEdge[];
 }
 
+interface GPTResponse {
+  nodes: Array<{
+    id: string;
+    label: string;
+    summary?: string;
+  }>;
+  edges: Array<{
+    from: string;
+    to: string;
+  }>;
+}
+
 function calculateNodePosition(level: number, index: number, totalNodesInLevel: number) {
   const SPACING_MULTIPLIER = 200;
   const LEVEL_SPACING = 150;
   
   if (level === 0) return { x: 0, y: 0 };
   
-  // Calculate angle based on index and total nodes in level
   const angleStep = (2 * Math.PI) / totalNodesInLevel;
-  const angle = index * angleStep - Math.PI / 2; // Start from top
-  
-  // Calculate radius based on level
+  const angle = index * angleStep - Math.PI / 2;
   const radius = level * LEVEL_SPACING;
   
   return {
@@ -53,44 +54,59 @@ function calculateNodePosition(level: number, index: number, totalNodesInLevel: 
   };
 }
 
-function parseContentToTopics(content: string): Topic[] {
-  // Split content by commas and clean up each topic
-  const topics = content.split(',').map(topic => topic.trim()).filter(Boolean);
+async function generateMindMapWithGPT(content: string): Promise<MindMapStructure> {
+  const prompt = `You are an AI assistant that creates mind maps from voice transcripts. You will receive a text transcription of someone's speech. Identify main topics, subtopics, and sub-subtopics, and produce a JSON with an array of nodes and edges. Each node must have a short, clear label. If there's repeated content, merge it into a single node. Return only JSON in this shape:
+
+  { "nodes": [ { "id": "node-0", "label": "Main Topic A", "summary": "(optional summary)" }, ... ], "edges": [ { "from": "node-0", "to": "node-1" }, ... ] }
   
-  // Create a root topic with subtopics
-  if (topics.length === 0) {
-    return [{
-      title: "Empty Mind Map",
-      subtopics: []
-    }];
+  Do not include any additional commentary or disclaimers.`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content }
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    console.error('OpenAI API error:', await response.text());
+    throw new Error('Failed to generate mind map structure');
   }
 
-  // Use the first topic as main topic and rest as subtopics
-  return [{
-    title: topics[0],
-    subtopics: topics.slice(1).map(topic => ({
-      title: topic
-    }))
-  }];
-}
+  const result = await response.json();
+  const gptResponse: GPTResponse = JSON.parse(result.choices[0].message.content);
 
-function generateMindMap(content: string): MindMapStructure {
-  const topics = parseContentToTopics(content);
+  // Convert GPT response to our mind map structure
   const nodes: MindMapNode[] = [];
   const edges: MindMapEdge[] = [];
-  let nodeIndex = 0;
+  const nodesByLevel: { [level: number]: MindMapNode[] } = {};
 
   // First pass: Create nodes and collect level information
-  const nodesByLevel: { [level: number]: MindMapNode[] } = {};
+  const nodeLevels = new Map<string, number>();
   
-  function processNode(topic: Topic, level: number, parentId?: string) {
-    const currentId = `node-${nodeIndex++}`;
-    
-    // Store node in its level group
+  // Calculate node levels based on edge relationships
+  gptResponse.edges.forEach(({ from, to }) => {
+    if (!nodeLevels.has(from)) nodeLevels.set(from, 0);
+    nodeLevels.set(to, (nodeLevels.get(from) || 0) + 1);
+  });
+
+  // Create nodes with positions based on their levels
+  gptResponse.nodes.forEach(node => {
+    const level = nodeLevels.get(node.id) || 0;
     nodesByLevel[level] = nodesByLevel[level] || [];
-    const node: MindMapNode = {
-      id: currentId,
-      label: topic.title,
+    
+    const newNode: MindMapNode = {
+      id: node.id,
+      label: node.label,
       position: { x: 0, y: 0 }, // Temporary position
       style: {
         background: level === 0 ? 'hsl(var(--primary))' : 'rgba(0, 0, 0, 0.8)',
@@ -106,37 +122,15 @@ function generateMindMap(content: string): MindMapStructure {
       }
     };
     
-    nodesByLevel[level].push(node);
-    nodes.push(node);
-    
-    // Create edge if there's a parent
-    if (parentId) {
-      edges.push({
-        id: `edge-${parentId}-${currentId}`,
-        source: parentId,
-        target: currentId,
-        style: {
-          stroke: 'hsl(var(--primary))',
-          strokeWidth: 2,
-          opacity: 0.8
-        }
-      });
+    if (node.summary) {
+      newNode.summary = node.summary;
     }
     
-    // Process subtopics
-    if (topic.subtopics) {
-      topic.subtopics.forEach(subtopic => {
-        processNode(subtopic, level + 1, currentId);
-      });
-    }
-  }
-  
-  // Process all root topics
-  topics.forEach(topic => {
-    processNode(topic, 0);
+    nodesByLevel[level].push(newNode);
+    nodes.push(newNode);
   });
-  
-  // Second pass: Calculate and set final positions
+
+  // Calculate final positions
   Object.entries(nodesByLevel).forEach(([level, nodesInLevel]) => {
     nodesInLevel.forEach((node, index) => {
       node.position = calculateNodePosition(
@@ -146,41 +140,55 @@ function generateMindMap(content: string): MindMapStructure {
       );
     });
   });
-  
+
+  // Create edges
+  gptResponse.edges.forEach(({ from, to }) => {
+    edges.push({
+      id: `edge-${from}-${to}`,
+      source: from,
+      target: to,
+      style: {
+        stroke: 'hsl(var(--primary))',
+        strokeWidth: 2,
+        opacity: 0.8
+      }
+    });
+  });
+
   return { nodes, edges };
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { content } = await req.json()
+    const { content } = await req.json();
     
     if (!content) {
-      throw new Error('No content provided')
+      throw new Error('No content provided');
     }
 
-    console.log('Generating mind map from content:', content)
+    console.log('Processing content for mind map generation:', content.substring(0, 100) + '...');
 
-    const mindMapStructure = generateMindMap(content)
+    const mindMapStructure = await generateMindMapWithGPT(content);
     
-    console.log('Generated mind map structure:', JSON.stringify(mindMapStructure))
+    console.log('Generated mind map structure:', JSON.stringify(mindMapStructure));
 
     return new Response(
       JSON.stringify(mindMapStructure),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
 
   } catch (error) {
-    console.error('Error generating mind map:', error)
+    console.error('Error in generate-mindmap function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    )
+    );
   }
-})
+});
